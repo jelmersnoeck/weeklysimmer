@@ -1,4 +1,9 @@
-export type Slot = "breakfast" | "lunch" | "dinner";
+export type Slot =
+  | "breakfast"
+  | "morning_snack"
+  | "lunch"
+  | "afternoon_snack"
+  | "dinner";
 export type Difficulty = "easy" | "medium" | "hard";
 export type ProteinClass = "lean" | "red_or_high_fat" | "vegetarian";
 

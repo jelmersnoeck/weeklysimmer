@@ -97,6 +97,44 @@ describe("plansRepo", () => {
     db.close();
   });
 
+  it("orders all five slots breakfast<morning_snack<lunch<afternoon_snack<dinner", () => {
+    const db = openDb(":memory:");
+    const mk = (slot: Meal["slot"]): Meal => ({
+      day: 0,
+      slot,
+      title: slot,
+      cuisine: "western",
+      proteinClass: "lean",
+      base: "none",
+      difficulty: "easy",
+      ingredients: [{ name: "x", quantity: 1, unit: "g", category: "pantry" }],
+      steps: ["do it"],
+      leftoverOf: null,
+    });
+    // insert out of display order to prove sorting
+    const id = savePlan(
+      db,
+      samplePlan({
+        meals: [
+          mk("dinner"),
+          mk("breakfast"),
+          mk("afternoon_snack"),
+          mk("morning_snack"),
+          mk("lunch"),
+        ],
+      }),
+    );
+    const order = getPlan(db, id)!.meals.map((m) => m.slot);
+    expect(order).toEqual([
+      "breakfast",
+      "morning_snack",
+      "lunch",
+      "afternoon_snack",
+      "dinner",
+    ]);
+    db.close();
+  });
+
   it("round-trips a meal's servings", () => {
     const db = openDb(":memory:");
     const dinner: Meal = {

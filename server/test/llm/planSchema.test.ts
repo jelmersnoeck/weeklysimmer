@@ -31,6 +31,17 @@ describe("planSchema", () => {
     expect(() => rawMealSchema.parse(noSlot)).toThrow();
   });
 
+  it("accepts the two snack slots", () => {
+    for (const slot of ["morning_snack", "afternoon_snack"] as const) {
+      const parsed = rawMealSchema.parse({ ...validMeal, slot });
+      expect(parsed.slot).toBe(slot);
+    }
+  });
+
+  it("rejects a slot outside the enum", () => {
+    expect(() => rawMealSchema.parse({ ...validMeal, slot: "brunch" })).toThrow();
+  });
+
   it("rejects a negative ingredient quantity", () => {
     const bad = {
       ...validMeal,

@@ -8,8 +8,10 @@ import type {
 
 const SLOT_ORDER: Record<Slot, number> = {
   breakfast: 0,
-  lunch: 1,
-  dinner: 2,
+  morning_snack: 1,
+  lunch: 2,
+  afternoon_snack: 3,
+  dinner: 4,
 };
 
 interface PlanRow {

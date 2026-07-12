@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-export const slotSchema = z.enum(["breakfast", "lunch", "dinner"]);
+export const slotSchema = z.enum([
+  "breakfast",
+  "morning_snack",
+  "lunch",
+  "afternoon_snack",
+  "dinner",
+]);
 export const difficultySchema = z.enum(["easy", "medium", "hard"]);
 export const proteinClassSchema = z.enum(["lean", "red_or_high_fat", "vegetarian"]);
 
