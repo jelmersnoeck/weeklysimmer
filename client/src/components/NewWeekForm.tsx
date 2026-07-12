@@ -1,20 +1,43 @@
 import { useMemo, useState } from "react";
-import type { GeneratePlanInput } from "../types";
+import type { EnabledSlot, GeneratePlanInput, MealSchedule, Slot } from "../types";
+import { DAY_LABELS, DAY_LABELS_LONG, SLOT_ORDER, slotLabel } from "../lib/meal";
 import { upcomingWeekOptions } from "../lib/weeks";
 import "./NewWeekForm.css";
 
 interface NewWeekFormProps {
   onGenerate: (input: GeneratePlanInput) => void | Promise<void>;
   recentTitles: string[];
+  /** The user's saved default meal schedule; seeds the meal-map grid. */
+  defaultSchedule: MealSchedule;
   onCancel?: () => void;
   submitting?: boolean;
   /** Injectable "now" for deterministic tests; defaults to the real current date. */
   today?: Date;
 }
 
+// Deep copy so grid edits never mutate the caller's schedule.
+function cloneSchedule(schedule: MealSchedule): MealSchedule {
+  return Object.fromEntries(
+    SLOT_ORDER.map((slot) => [slot, [...(schedule[slot] ?? Array(7).fill(false))]]),
+  ) as MealSchedule;
+}
+
+// Convert the on/off matrix to the flat list the backend expects.
+function toEnabledSlots(schedule: MealSchedule): EnabledSlot[] {
+  const out: EnabledSlot[] = [];
+  for (const slot of SLOT_ORDER) {
+    const days = schedule[slot] ?? [];
+    for (let day = 0; day < 7; day++) {
+      if (days[day]) out.push({ day, slot });
+    }
+  }
+  return out;
+}
+
 export function NewWeekForm({
   onGenerate,
   recentTitles,
+  defaultSchedule,
   onCancel,
   submitting = false,
   today,
@@ -24,37 +47,78 @@ export function NewWeekForm({
     [today],
   );
   const [weekStart, setWeekStart] = useState(weekOptions[0].weekStart);
-  const [vegBox, setVegBox] = useState<string[]>([]);
-  const [vegDraft, setVegDraft] = useState("");
+  const [onHand, setOnHand] = useState<string[]>([]);
+  const [onHandDraft, setOnHandDraft] = useState("");
   const [note, setNote] = useState("");
   const [avoid, setAvoid] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<MealSchedule>(() =>
+    cloneSchedule(defaultSchedule),
+  );
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const uniqueRecent = useMemo(
     () => Array.from(new Set(recentTitles)),
     [recentTitles],
   );
 
-  function addVeg() {
-    const value = vegDraft.trim();
+  function addOnHand() {
+    const value = onHandDraft.trim();
     if (!value) return;
-    setVegBox((prev) => (prev.includes(value) ? prev : [...prev, value]));
-    setVegDraft("");
+    setOnHand((prev) => (prev.includes(value) ? prev : [...prev, value]));
+    setOnHandDraft("");
   }
 
-  function handleVegKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handleOnHandKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
-      addVeg();
+      addOnHand();
     }
   }
 
-  function removeVeg(veg: string) {
-    setVegBox((prev) => prev.filter((v) => v !== veg));
+  function removeOnHand(item: string) {
+    setOnHand((prev) => prev.filter((v) => v !== item));
+  }
+
+  function toggleCell(slot: Slot, day: number) {
+    setScheduleError(null);
+    setSchedule((prev) => {
+      const next = cloneSchedule(prev);
+      next[slot][day] = !next[slot][day];
+      return next;
+    });
+  }
+
+  // Row header: toggle a whole slot across all 7 days.
+  // Rule: if any day is on, turn them all off; otherwise turn them all on.
+  function toggleSlot(slot: Slot) {
+    setScheduleError(null);
+    setSchedule((prev) => {
+      const next = cloneSchedule(prev);
+      const anyOn = next[slot].some(Boolean);
+      next[slot] = Array(7).fill(!anyOn);
+      return next;
+    });
+  }
+
+  // Column header: toggle all 5 slots for a single day, same rule.
+  function toggleDay(day: number) {
+    setScheduleError(null);
+    setSchedule((prev) => {
+      const next = cloneSchedule(prev);
+      const anyOn = SLOT_ORDER.some((slot) => next[slot][day]);
+      for (const slot of SLOT_ORDER) next[slot][day] = !anyOn;
+      return next;
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    void onGenerate({ weekStart, vegBox, note: note.trim(), avoid });
+    const enabledSlots = toEnabledSlots(schedule);
+    if (enabledSlots.length === 0) {
+      setScheduleError("Pick at least one meal to plan.");
+      return;
+    }
+    void onGenerate({ weekStart, onHand, note: note.trim(), avoid, enabledSlots });
   }
 
   return (
@@ -76,31 +140,97 @@ export function NewWeekForm({
       </div>
 
       <div className="new-week__field">
-        <label htmlFor="nw-veg">Add a vegetable</label>
+        <label htmlFor="nw-onhand">What foods do you have to use up?</label>
         <input
-          id="nw-veg"
+          id="nw-onhand"
           type="text"
-          value={vegDraft}
-          placeholder="Type a veg, then press Enter"
-          onChange={(e) => setVegDraft(e.target.value)}
-          onKeyDown={handleVegKeyDown}
+          value={onHandDraft}
+          placeholder="Type an item, then press Enter"
+          onChange={(e) => setOnHandDraft(e.target.value)}
+          onKeyDown={handleOnHandKeyDown}
         />
-        {vegBox.length > 0 && (
-          <ul className="new-week__chips" aria-label="Veg box">
-            {vegBox.map((veg) => (
-              <li key={veg} className="new-week__chip">
-                <span>{veg}</span>
+        <p className="new-week__hint">
+          Add anything you already have — veg, leftovers, pantry items — one at a
+          time.
+        </p>
+        {onHand.length > 0 && (
+          <ul className="new-week__chips" aria-label="Foods to use up">
+            {onHand.map((item) => (
+              <li key={item} className="new-week__chip">
+                <span>{item}</span>
                 <button
                   type="button"
                   className="new-week__chip-remove"
-                  aria-label={`Remove ${veg}`}
-                  onClick={() => removeVeg(veg)}
+                  aria-label={`Remove ${item}`}
+                  onClick={() => removeOnHand(item)}
                 >
                   ✕
                 </button>
               </li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="new-week__field">
+        <span className="new-week__label" id="nw-mealmap-label">
+          Which meals should we plan?
+        </span>
+        <p className="new-week__hint">
+          Toggle a cell, or a whole row/column, to choose meals for the week.
+        </p>
+        <div
+          className="meal-map"
+          role="grid"
+          aria-labelledby="nw-mealmap-label"
+        >
+          <div className="meal-map__row meal-map__row--head" role="row">
+            <span className="meal-map__corner" role="columnheader" />
+            {DAY_LABELS.map((label, day) => (
+              <button
+                key={label}
+                type="button"
+                className="meal-map__col-head"
+                role="columnheader"
+                aria-label={`Toggle all meals on ${DAY_LABELS_LONG[day]}`}
+                onClick={() => toggleDay(day)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {SLOT_ORDER.map((slot) => (
+            <div className="meal-map__row" role="row" key={slot}>
+              <button
+                type="button"
+                className="meal-map__row-head"
+                role="rowheader"
+                aria-label={`Toggle all ${slotLabel(slot)} meals`}
+                onClick={() => toggleSlot(slot)}
+              >
+                {slotLabel(slot)}
+              </button>
+              {DAY_LABELS.map((_, day) => {
+                const on = Boolean(schedule[slot]?.[day]);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    role="gridcell"
+                    className={`meal-map__cell${on ? " is-on" : ""}`}
+                    aria-pressed={on}
+                    aria-label={`${DAY_LABELS_LONG[day]} ${slotLabel(slot).toLowerCase()}`}
+                    onClick={() => toggleCell(slot, day)}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {scheduleError && (
+          <p className="new-week__error" role="alert">
+            {scheduleError}
+          </p>
         )}
       </div>
 

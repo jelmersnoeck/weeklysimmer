@@ -9,7 +9,8 @@
   gap: var(--space-2);
 }
 
-.new-week__field label {
+.new-week__field label,
+.new-week__label {
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -71,8 +72,78 @@
   font-size: 0.9rem;
 }
 
+.new-week__error {
+  margin: 0;
+  color: var(--beet);
+  font-size: 0.9rem;
+}
+
 .new-week__actions {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* Compact meal-map: 5 slot rows x 7 day columns of toggles. */
+.meal-map {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  overflow-x: auto;
+}
+
+.meal-map__row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1.2fr) repeat(7, minmax(28px, 1fr));
+  gap: var(--space-1);
+  align-items: stretch;
+}
+
+.meal-map__corner {
+  display: block;
+}
+
+.meal-map__col-head,
+.meal-map__row-head {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-60);
+  background: transparent;
+  border: none;
+  padding: var(--space-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.meal-map__col-head {
+  text-align: center;
+}
+
+.meal-map__row-head {
+  text-align: left;
+}
+
+.meal-map__col-head:hover,
+.meal-map__row-head:hover {
+  background: var(--herb-tint);
+  color: var(--ink);
+}
+
+.meal-map__cell {
+  min-height: 26px;
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.meal-map__cell:hover {
+  border-color: var(--herb);
+}
+
+.meal-map__cell.is-on {
+  background: var(--herb);
+  border-color: var(--herb);
 }
