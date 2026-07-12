@@ -27,6 +27,7 @@ export const rawMealSchema = z.object({
   difficulty: difficultySchema,
   prepMinutes: z.number().int().min(0),
   cookMinutes: z.number().int().min(0),
+  caloriesPerServing: z.number().int().min(0),
   ingredients: z.array(ingredientSchema).min(1),
   steps: z.array(z.string()),
   sourceUrl: z.string().optional(),

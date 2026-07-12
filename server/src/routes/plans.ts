@@ -38,6 +38,7 @@ function scaleRawMeal(raw: RawMeal, servings: number): Meal {
     difficulty: raw.difficulty,
     prepMinutes: raw.prepMinutes,
     cookMinutes: raw.cookMinutes,
+    caloriesPerServing: raw.caloriesPerServing,
     servings,
     ingredients: raw.ingredients.map((i) => scaleIngredient(i, servings)),
     steps: raw.steps,

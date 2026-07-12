@@ -22,6 +22,7 @@ const cannedPlan: RawPlan = {
       difficulty: "easy",
       prepMinutes: 10,
       cookMinutes: 20,
+      caloriesPerServing: 540,
       ingredients: [
         { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
         { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -41,6 +42,7 @@ const cannedPlan: RawPlan = {
       difficulty: "easy",
       prepMinutes: 5,
       cookMinutes: 0,
+      caloriesPerServing: 300,
       ingredients: [
         { name: "chicken breast", quantity: 100, unit: "g", category: "meat" },
       ],
@@ -60,6 +62,7 @@ const replacementMeal: RawMeal = {
   difficulty: "easy",
   prepMinutes: 15,
   cookMinutes: 15,
+  caloriesPerServing: 610,
   ingredients: [
     { name: "turkey mince", quantity: 160, unit: "g", category: "meat" },
     { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -296,6 +299,8 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
     // prep/cook time carried onto the replacement
     expect(newDinner.prepMinutes).toBe(15);
     expect(newDinner.cookMinutes).toBe(15);
+    // per-serving calories carried onto the replacement, unscaled
+    expect(newDinner.caloriesPerServing).toBe(610);
     // replacement ingredients scaled x3
     const turkey = newDinner.ingredients.find(
       (i: { name: string }) => i.name === "turkey mince",

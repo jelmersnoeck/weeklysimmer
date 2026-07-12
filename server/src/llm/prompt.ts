@@ -74,6 +74,8 @@ Dinners must be "easy" ~30-minute weeknight dinners (keep prepMinutes + cookMinu
 ≲ 30). Keep steps short and simple.
 Every meal MUST include realistic prep and cook time as integer minutes: "prepMinutes"
 (hands-on prep) and "cookMinutes" (time actually cooking; use 0 for no-cook meals).
+Every meal MUST also include "caloriesPerServing": the estimated kcal for a single
+person's serving (the app scales portions, so this is per one serving, not the whole dish).
 
 ## Snacks (two per day: mid-morning and mid-afternoon)
 - Each day has a "morning_snack" (mid-morning) and an "afternoon_snack" (mid-afternoon).
@@ -172,6 +174,7 @@ keep the week's protein balance. Do not switch it to a different protein class.
   fruit) — lean, high-protein and toddler-friendly where possible.
 - Include realistic prep and cook time as integer minutes: "prepMinutes" (hands-on prep)
   and "cookMinutes" (0 for no-cook meals). Keep dinners' prepMinutes + cookMinutes ≲ 30.
+- Include "caloriesPerServing": the estimated kcal for a SINGLE person's portion.
 
 ## Variety — be DIFFERENT
 The plan already contains these meals; the replacement MUST be different from them,

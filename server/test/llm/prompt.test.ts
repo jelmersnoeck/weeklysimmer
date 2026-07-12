@@ -110,6 +110,11 @@ describe("buildCurationPrompt", () => {
     expect(prompt).toContain("cookMinutes");
   });
 
+  it("asks for per-serving calories on every meal", () => {
+    expect(prompt).toContain("caloriesPerServing");
+    expect(prompt.toLowerCase()).toContain("per one serving");
+  });
+
   it("specifies per-single-serving quantities, units and shopping categories", () => {
     const lower = prompt.toLowerCase();
     expect(lower).toContain("per single serving");
@@ -214,6 +219,10 @@ describe("buildRegeneratePrompt", () => {
   it("asks for prep and cook time in the single-meal output", () => {
     expect(prompt).toContain("prepMinutes");
     expect(prompt).toContain("cookMinutes");
+  });
+
+  it("asks for per-serving calories in the single-meal output", () => {
+    expect(prompt).toContain("caloriesPerServing");
   });
 
   it("works for a snack target slot", () => {

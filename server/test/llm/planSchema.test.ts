@@ -11,6 +11,7 @@ const validMeal = {
   difficulty: "easy" as const,
   prepMinutes: 10,
   cookMinutes: 20,
+  caloriesPerServing: 520,
   ingredients: [
     { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
     { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -60,6 +61,23 @@ describe("planSchema", () => {
     ).toBe(0);
     // negative minutes rejected
     expect(() => rawMealSchema.parse({ ...validMeal, prepMinutes: -1 })).toThrow();
+  });
+
+  it("requires an integer caloriesPerServing and rejects missing/negative/float", () => {
+    expect(rawMealSchema.parse(validMeal).caloriesPerServing).toBe(520);
+    const { caloriesPerServing, ...noCals } = validMeal;
+    expect(() => rawMealSchema.parse(noCals)).toThrow();
+    expect(() =>
+      rawMealSchema.parse({ ...validMeal, caloriesPerServing: -1 }),
+    ).toThrow();
+    expect(() =>
+      rawMealSchema.parse({ ...validMeal, caloriesPerServing: 12.5 }),
+    ).toThrow();
+    // zero kcal is allowed (e.g. water)
+    expect(
+      rawMealSchema.parse({ ...validMeal, caloriesPerServing: 0 })
+        .caloriesPerServing,
+    ).toBe(0);
   });
 
   it("rejects a negative ingredient quantity", () => {

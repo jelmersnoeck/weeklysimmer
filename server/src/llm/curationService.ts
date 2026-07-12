@@ -56,6 +56,7 @@ export async function generatePlan(
     difficulty: m.difficulty,
     prepMinutes: m.prepMinutes,
     cookMinutes: m.cookMinutes,
+    caloriesPerServing: m.caloriesPerServing,
     servings,
     ingredients: m.ingredients.map((i) => scaleIngredient(i, servings)),
     steps: m.steps,

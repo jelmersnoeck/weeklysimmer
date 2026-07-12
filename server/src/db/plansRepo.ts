@@ -34,6 +34,7 @@ interface MealRow {
   difficulty: Meal["difficulty"];
   prep_minutes: number | null;
   cook_minutes: number | null;
+  calories_per_serving: number | null;
   servings: number;
   ingredients: string;
   steps: string;
@@ -65,9 +66,9 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
   const insertMeal = db.prepare(
     `INSERT INTO meals
       (plan_id, day, slot, title, cuisine, protein_class, base, difficulty,
-       prep_minutes, cook_minutes, servings, ingredients, steps, source_url,
-       leftover_of, rating)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       prep_minutes, cook_minutes, calories_per_serving, servings, ingredients,
+       steps, source_url, leftover_of, rating)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const tx = db.transaction((p: WeeklyPlan): number => {
@@ -90,6 +91,7 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
         meal.difficulty,
         meal.prepMinutes ?? null,
         meal.cookMinutes ?? null,
+        meal.caloriesPerServing ?? null,
         meal.servings ?? 1,
         JSON.stringify(meal.ingredients),
         JSON.stringify(meal.steps),
@@ -176,8 +178,8 @@ export function updateMeal(
   db.prepare(
     `UPDATE meals SET
        title = ?, cuisine = ?, protein_class = ?, base = ?, difficulty = ?,
-       prep_minutes = ?, cook_minutes = ?, servings = ?, ingredients = ?,
-       steps = ?, source_url = ?, leftover_of = ?, rating = NULL
+       prep_minutes = ?, cook_minutes = ?, calories_per_serving = ?, servings = ?,
+       ingredients = ?, steps = ?, source_url = ?, leftover_of = ?, rating = NULL
      WHERE id = ?`
   ).run(
     meal.title,
@@ -187,6 +189,7 @@ export function updateMeal(
     meal.difficulty,
     meal.prepMinutes ?? null,
     meal.cookMinutes ?? null,
+    meal.caloriesPerServing ?? null,
     meal.servings ?? 1,
     JSON.stringify(meal.ingredients),
     JSON.stringify(meal.steps),
@@ -256,6 +259,7 @@ function rowToMeal(row: MealRow): Meal {
     difficulty: row.difficulty,
     prepMinutes: row.prep_minutes ?? undefined,
     cookMinutes: row.cook_minutes ?? undefined,
+    caloriesPerServing: row.calories_per_serving ?? undefined,
     servings: row.servings,
     ingredients: JSON.parse(row.ingredients),
     steps: JSON.parse(row.steps),

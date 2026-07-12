@@ -77,6 +77,38 @@ describe("openDb", () => {
     db2.close();
   });
 
+  it("a fresh db has the calories_per_serving column on meals", () => {
+    const db = openDb(":memory:");
+    expect(mealColumns(db)).toContain("calories_per_serving");
+    db.close();
+  });
+
+  it("migration adds calories_per_serving to a pre-existing meals table missing it", () => {
+    const path = `/tmp/mealplanner-calories-${Date.now()}.db`;
+    const old = new Database(path);
+    old.exec(
+      `CREATE TABLE meals (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         day INTEGER NOT NULL,
+         slot TEXT NOT NULL,
+         title TEXT NOT NULL
+       )`,
+    );
+    expect(mealColumns(old)).not.toContain("calories_per_serving");
+    old.close();
+
+    const db = openDb(path);
+    expect(mealColumns(db)).toContain("calories_per_serving");
+    db.close();
+
+    // idempotent: re-running does not duplicate the column
+    const db2 = openDb(path);
+    expect(
+      mealColumns(db2).filter((c) => c === "calories_per_serving"),
+    ).toHaveLength(1);
+    db2.close();
+  });
+
   it("a fresh db has the on_hand column (not veg_box) on weekly_plans", () => {
     const db = openDb(":memory:");
     const cols = planColumns(db);

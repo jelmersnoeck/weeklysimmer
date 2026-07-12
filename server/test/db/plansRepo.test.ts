@@ -168,6 +168,7 @@ describe("plansRepo", () => {
       difficulty: "easy",
       prepMinutes: 12,
       cookMinutes: 18,
+      caloriesPerServing: 480,
       ingredients: [{ name: "rice", quantity: 60, unit: "g", category: "pantry" }],
       steps: ["Cook"],
       leftoverOf: null,
@@ -189,9 +190,12 @@ describe("plansRepo", () => {
     const timed = meals.find((m) => m.title === "Timed Meal")!;
     expect(timed.prepMinutes).toBe(12);
     expect(timed.cookMinutes).toBe(18);
+    expect(timed.caloriesPerServing).toBe(480);
     const untimed = meals.find((m) => m.title === "Untimed Meal")!;
     expect(untimed.prepMinutes).toBeUndefined();
     expect(untimed.cookMinutes).toBeUndefined();
+    // absent calories map to undefined (NULL in the db)
+    expect(untimed.caloriesPerServing).toBeUndefined();
     db.close();
   });
 

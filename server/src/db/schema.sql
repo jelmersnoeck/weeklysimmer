@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS meals (
   difficulty TEXT NOT NULL,
   prep_minutes INTEGER,
   cook_minutes INTEGER,
+  calories_per_serving INTEGER,
   servings INTEGER NOT NULL,
   ingredients TEXT NOT NULL,
   steps TEXT NOT NULL,

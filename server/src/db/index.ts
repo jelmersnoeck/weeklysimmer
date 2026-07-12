@@ -23,6 +23,7 @@ export function openDb(path: string): Database.Database {
 function migrate(db: Database.Database): void {
   addColumnIfMissing(db, "meals", "prep_minutes", "INTEGER");
   addColumnIfMissing(db, "meals", "cook_minutes", "INTEGER");
+  addColumnIfMissing(db, "meals", "calories_per_serving", "INTEGER");
   renameColumnIfNeeded(db, "weekly_plans", "veg_box", "on_hand");
 }
 

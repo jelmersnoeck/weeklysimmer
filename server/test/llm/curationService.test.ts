@@ -18,6 +18,7 @@ const cannedPlan: RawPlan = {
       difficulty: "easy",
       prepMinutes: 10,
       cookMinutes: 20,
+      caloriesPerServing: 540,
       ingredients: [
         { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
         { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -37,6 +38,7 @@ const cannedPlan: RawPlan = {
       difficulty: "easy",
       prepMinutes: 5,
       cookMinutes: 0,
+      caloriesPerServing: 320,
       ingredients: [
         { name: "chicken breast", quantity: 100, unit: "g", category: "meat" },
         { name: "rice", quantity: 40, unit: "g", category: "grains" },
@@ -125,6 +127,9 @@ describe("generatePlan", () => {
     expect(dinner.prepMinutes).toBe(10);
     expect(dinner.cookMinutes).toBe(20);
     expect(lunch.cookMinutes).toBe(0);
+    // per-serving calories carried through unscaled (independent of household count)
+    expect(dinner.caloriesPerServing).toBe(540);
+    expect(lunch.caloriesPerServing).toBe(320);
   });
 
   it("aggregates the shopping list from scaled quantities, excluding leftover meals", async () => {
