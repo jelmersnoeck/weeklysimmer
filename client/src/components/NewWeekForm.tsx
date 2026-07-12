@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { EnabledSlot, GeneratePlanInput, MealSchedule, Slot } from "../types";
 import { DAY_LABELS, DAY_LABELS_LONG, SLOT_ORDER, slotLabel } from "../lib/meal";
+import { parseOnHand } from "../lib/onHand";
 import { upcomingWeekOptions } from "../lib/weeks";
 import "./NewWeekForm.css";
 
@@ -47,8 +48,7 @@ export function NewWeekForm({
     [today],
   );
   const [weekStart, setWeekStart] = useState(weekOptions[0].weekStart);
-  const [onHand, setOnHand] = useState<string[]>([]);
-  const [onHandDraft, setOnHandDraft] = useState("");
+  const [onHand, setOnHand] = useState("");
   const [note, setNote] = useState("");
   const [avoid, setAvoid] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<MealSchedule>(() =>
@@ -60,24 +60,6 @@ export function NewWeekForm({
     () => Array.from(new Set(recentTitles)),
     [recentTitles],
   );
-
-  function addOnHand() {
-    const value = onHandDraft.trim();
-    if (!value) return;
-    setOnHand((prev) => (prev.includes(value) ? prev : [...prev, value]));
-    setOnHandDraft("");
-  }
-
-  function handleOnHandKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addOnHand();
-    }
-  }
-
-  function removeOnHand(item: string) {
-    setOnHand((prev) => prev.filter((v) => v !== item));
-  }
 
   function toggleCell(slot: Slot, day: number) {
     setScheduleError(null);
@@ -118,7 +100,13 @@ export function NewWeekForm({
       setScheduleError("Pick at least one meal to plan.");
       return;
     }
-    void onGenerate({ weekStart, onHand, note: note.trim(), avoid, enabledSlots });
+    void onGenerate({
+      weekStart,
+      onHand: parseOnHand(onHand),
+      note: note.trim(),
+      avoid,
+      enabledSlots,
+    });
   }
 
   return (
@@ -141,35 +129,17 @@ export function NewWeekForm({
 
       <div className="new-week__field">
         <label htmlFor="nw-onhand">What foods do you have to use up?</label>
-        <input
+        <textarea
           id="nw-onhand"
-          type="text"
-          value={onHandDraft}
-          placeholder="Type an item, then press Enter"
-          onChange={(e) => setOnHandDraft(e.target.value)}
-          onKeyDown={handleOnHandKeyDown}
+          rows={4}
+          value={onHand}
+          placeholder="One item per line, or comma-separated — e.g. half a cabbage, leftover rice, 2 carrots"
+          onChange={(e) => setOnHand(e.target.value)}
         />
         <p className="new-week__hint">
-          Add anything you already have — veg, leftovers, pantry items — one at a
-          time.
+          Add anything you already have — veg, leftovers, pantry items. One per
+          line or separated by commas.
         </p>
-        {onHand.length > 0 && (
-          <ul className="new-week__chips" aria-label="Foods to use up">
-            {onHand.map((item) => (
-              <li key={item} className="new-week__chip">
-                <span>{item}</span>
-                <button
-                  type="button"
-                  className="new-week__chip-remove"
-                  aria-label={`Remove ${item}`}
-                  onClick={() => removeOnHand(item)}
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <div className="new-week__field">

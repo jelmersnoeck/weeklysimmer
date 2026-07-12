@@ -12,26 +12,29 @@ function allOnSchedule(): MealSchedule {
 }
 
 describe("NewWeekForm", () => {
-  test("adding and removing on-hand chips updates the visible chips", async () => {
+  test("typing into the textarea and submitting sends the parsed onHand array", async () => {
     const user = userEvent.setup();
+    const onGenerate = vi.fn().mockResolvedValue(undefined);
     render(
       <NewWeekForm
-        onGenerate={vi.fn()}
+        onGenerate={onGenerate}
         recentTitles={[]}
         defaultSchedule={allOnSchedule()}
       />,
     );
 
-    const input = screen.getByLabelText(/what foods do you have to use up/i);
-    await user.type(input, "leek{enter}");
-    await user.type(input, "kale{enter}");
+    const textarea = screen.getByLabelText(/what foods do you have to use up/i);
+    // Mixed newlines + commas, with a duplicate that should be dropped.
+    await user.type(textarea, "leek, kale{enter}leek{enter}2 carrots");
 
-    expect(screen.getByText("leek")).toBeInTheDocument();
-    expect(screen.getByText("kale")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /generate/i }));
 
-    await user.click(screen.getByRole("button", { name: /remove leek/i }));
-    expect(screen.queryByText("leek")).not.toBeInTheDocument();
-    expect(screen.getByText("kale")).toBeInTheDocument();
+    expect(onGenerate).toHaveBeenCalledTimes(1);
+    expect(onGenerate.mock.calls[0][0].onHand).toEqual([
+      "leek",
+      "kale",
+      "2 carrots",
+    ]);
   });
 
   test("submit sends weekStart, onHand, note, avoid and enabledSlots", async () => {
