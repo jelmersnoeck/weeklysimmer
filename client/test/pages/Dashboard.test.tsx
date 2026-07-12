@@ -21,12 +21,17 @@ function allOnSchedule(): MealSchedule {
 }
 
 const settings: Settings = {
-  members: [],
-  restrictions: [],
-  avoidIngredients: [],
-  proteinCadence: { veg_per_week: 2, red_or_high_fat_per_week: 2 },
+  configured: true,
+  household: [{ id: "a1", type: "adult", appetite: "standard" }],
+  proteins: [],
+  vegetablesLiked: [],
+  fruitsLiked: [],
+  cuisinesLiked: [],
+  dishTypesLiked: [],
+  flavoursLiked: [],
+  avoid: [],
+  diet: "none",
   effort: "medium",
-  defaultVegQuantities: {},
   mealSchedule: allOnSchedule(),
 };
 

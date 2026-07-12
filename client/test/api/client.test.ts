@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { generatePlan, getJob, getPlan, listJobs } from "../../src/api/client";
+import type { Settings } from "../../src/types";
+import {
+  generatePlan,
+  getJob,
+  getOptions,
+  getPlan,
+  getSettings,
+  listJobs,
+  updateSettings,
+} from "../../src/api/client";
+import { SLOT_ORDER } from "../../src/lib/meal";
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -63,6 +73,70 @@ describe("jobs", () => {
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs/job-123");
     expect(job.id).toBe("job-123");
+  });
+});
+
+const sampleSettings: Settings = {
+  configured: true,
+  household: [{ id: "a1", type: "adult", appetite: "standard" }],
+  proteins: [{ key: "chicken", frequency: "often" }],
+  vegetablesLiked: ["carrot"],
+  fruitsLiked: [],
+  cuisinesLiked: [],
+  dishTypesLiked: [],
+  flavoursLiked: [],
+  avoid: [],
+  diet: "none",
+  effort: "easy",
+  mealSchedule: Object.fromEntries(
+    SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),
+  ) as Settings["mealSchedule"],
+};
+
+describe("settings", () => {
+  test("getSettings GETs /api/settings", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(sampleSettings));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const settings = await getSettings();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/settings");
+    expect(settings.configured).toBe(true);
+  });
+
+  test("getOptions GETs /api/options", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ proteins: ["chicken"] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getOptions();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/options");
+  });
+
+  test("updateSettings PUTs the body and returns settings + conflicts", async () => {
+    const conflicts = [
+      { field: "proteins", key: "chicken", message: "Chicken isn't vegan" },
+    ];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ settings: sampleSettings, conflicts }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await updateSettings(sampleSettings);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/settings");
+    expect(init.method).toBe("PUT");
+    expect(init.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(JSON.parse(init.body)).toEqual(sampleSettings);
+    expect(result.settings.configured).toBe(true);
+    expect(result.conflicts).toEqual(conflicts);
   });
 });
 
