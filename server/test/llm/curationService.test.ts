@@ -147,4 +147,17 @@ describe("generatePlan", () => {
     const row = db.prepare("SELECT COUNT(*) AS n FROM weekly_plans").get() as { n: number };
     expect(row.n).toBe(0);
   });
+
+  it("rejects a plan with two meals sharing the same day and slot", async () => {
+    const dupPlan: RawPlan = {
+      meals: [
+        cannedPlan.meals[0],
+        { ...cannedPlan.meals[1], day: 0, slot: "dinner" },
+      ],
+    };
+    const { curator } = fakeCurator(dupPlan);
+    await expect(generatePlan(db, curator, input)).rejects.toThrow(
+      "LLM returned duplicate meals for the same day and slot",
+    );
+  });
 });
