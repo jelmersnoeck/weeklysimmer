@@ -6,3 +6,5 @@ dist/
 *.sqlite
 *.sqlite3
 .DS_Store
+server/dist/
+server/test/**/*.js
