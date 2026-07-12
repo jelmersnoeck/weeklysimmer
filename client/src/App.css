@@ -22,6 +22,25 @@
   gap: var(--space-3);
 }
 
+/* The brand doubles as a Home control when there's nav to return to. */
+.app__brand--home {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.app__brand--home:hover .app__title {
+  color: var(--herb);
+}
+
+.app__brand--home .app__title {
+  transition: color 120ms ease;
+}
+
 .app__mark {
   color: var(--squash);
   font-size: 1.1rem;

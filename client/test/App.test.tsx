@@ -25,7 +25,8 @@ function makeSettings(configured: boolean): Settings {
     dishTypesLiked: [],
     flavoursLiked: [],
     avoid: [],
-    diet: "none",
+    diets: [],
+    units: ["metric"],
     effort: "medium",
     mealSchedule: allOnSchedule(),
   };
@@ -36,8 +37,9 @@ const options: Options = {
   cuisines: ["italian"],
   dishTypes: ["pasta"],
   flavours: ["cheesy"],
-  avoids: ["dairy"],
-  diets: ["none", "vegan"],
+  avoids: ["dairy", "lactose"],
+  diets: ["vegetarian", "vegan", "pescatarian", "low_fodmap"],
+  measurementSystems: ["metric", "cups"],
   vegetables: ["carrot"],
   fruits: ["apple"],
   frequencies: ["never", "occasionally", "weekly", "often"],
@@ -115,5 +117,47 @@ describe("App", () => {
         screen.getByRole("heading", { name: /^preferences$/i }),
       ).toBeInTheDocument(),
     );
+  });
+
+  test("uses Weekly Simmer branding", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(makeSettings(true));
+    vi.mocked(api.getOptions).mockResolvedValue(options);
+    vi.mocked(api.listPlans).mockResolvedValue([]);
+    vi.mocked(api.listJobs).mockResolvedValue([]);
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: /weekly simmer home/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/the prep sheet/i)).not.toBeInTheDocument();
+  });
+
+  test("clicking the brand returns to the Dashboard from Settings", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getSettings).mockResolvedValue(makeSettings(true));
+    vi.mocked(api.getOptions).mockResolvedValue(options);
+    vi.mocked(api.listPlans).mockResolvedValue([]);
+    vi.mocked(api.listJobs).mockResolvedValue([]);
+
+    render(<App />);
+
+    // Go to Settings first.
+    await user.click(await screen.findByRole("button", { name: /^settings$/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: /^preferences$/i }),
+      ).toBeInTheDocument(),
+    );
+
+    // Click the brand to go home.
+    await user.click(screen.getByRole("button", { name: /weekly simmer home/i }));
+
+    expect(
+      await screen.findByRole("button", { name: /plan your first week/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /^preferences$/i }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -69,7 +69,7 @@ export default function App() {
             <span className="app__mark" aria-hidden="true">
               ▲
             </span>
-            <h1 className="app__title">The Prep Sheet</h1>
+            <h1 className="app__title">Weekly Simmer</h1>
           </div>
         </header>
         <main className="app__main">
@@ -90,12 +90,20 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <div className="app__brand">
+        <button
+          type="button"
+          className="app__brand app__brand--home"
+          aria-label="Weekly Simmer home"
+          onClick={() => {
+            setSelectedPlanId(null);
+            setView("dashboard");
+          }}
+        >
           <span className="app__mark" aria-hidden="true">
             ▲
           </span>
-          <h1 className="app__title">The Prep Sheet</h1>
-        </div>
+          <h1 className="app__title">Weekly Simmer</h1>
+        </button>
         <nav className="app__nav" aria-label="Main views">
           <button
             type="button"
@@ -129,6 +137,7 @@ export default function App() {
           <Dashboard
             selectedPlanId={selectedPlanId}
             onSelectPlan={setSelectedPlanId}
+            units={settings.units}
           />
         )}
         {view === "history" && <History onOpenPlan={openPlanFromHistory} />}

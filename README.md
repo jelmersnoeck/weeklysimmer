@@ -1,4 +1,4 @@
-# Meal Prep Planner
+# Weekly Simmer
 
 A local web app that plans a week of meals around your **vegetable-box delivery**.
 Each week you enter the veg you know is arriving plus an optional note; Claude
@@ -12,7 +12,7 @@ and meal ratings are saved for variety.
 
 Three layers. The Claude API key stays server-side (never in the browser).
 
-- **client/** — React + Vite dashboard ("The Prep Sheet"). Talks only to `/api`.
+- **client/** — React + Vite dashboard ("Weekly Simmer"). Talks only to `/api`.
 - **server/** — Express + SQLite. Owns the API key, calls Claude, and does all the
   deterministic math (portion scaling, shopping-list aggregation, veg-coverage).
 - **Claude** — Opus 4.8 with the web search tool, returning a strict, schema-validated
