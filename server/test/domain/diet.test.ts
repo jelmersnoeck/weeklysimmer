@@ -134,4 +134,16 @@ describe("dietConflicts", () => {
       );
     });
   });
+
+  describe("lactose_free", () => {
+    it("flags creamy but NOT cheesy (hard cheese is low-lactose)", () => {
+      const s = makeSettings({
+        diet: "lactose_free",
+        flavoursLiked: ["cheesy", "creamy", "savoury"],
+      });
+      const c = dietConflicts(s);
+      expect(c.map((x) => x.key)).toEqual(["creamy"]);
+      expect(c[0].message.toLowerCase()).toContain("lactose");
+    });
+  });
 });

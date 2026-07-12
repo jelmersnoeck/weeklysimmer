@@ -9,6 +9,7 @@ const SPECIAL: Record<string, string> = {
   low_fodmap: "Low-FODMAP",
   gluten_free: "Gluten-free",
   dairy_free: "Dairy-free",
+  lactose_free: "Lactose-free",
   very_active: "Very active",
   stir_fry: "Stir-fry",
   tray_bake: "Tray-bake",

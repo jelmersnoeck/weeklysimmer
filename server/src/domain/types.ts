@@ -53,7 +53,8 @@ export type Diet =
   | "pescatarian"
   | "low_fodmap"
   | "gluten_free"
-  | "dairy_free";
+  | "dairy_free"
+  | "lactose_free";
 
 /** One person in the household. Appetite + type drive the portion factor. */
 export interface HouseholdMember {

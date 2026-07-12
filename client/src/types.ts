@@ -72,7 +72,8 @@ export type Diet =
   | "pescatarian"
   | "low_fodmap"
   | "gluten_free"
-  | "dairy_free";
+  | "dairy_free"
+  | "lactose_free";
 
 export interface HouseholdMember {
   id: string;

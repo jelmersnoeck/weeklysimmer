@@ -161,4 +161,17 @@ describe("dietConflicts", () => {
       },
     ]);
   });
+
+  test("lactose_free flags creamy but not cheesy", () => {
+    const s = withDiet("lactose_free", {
+      flavoursLiked: ["cheesy", "creamy"],
+    });
+    expect(dietConflicts(s)).toEqual([
+      {
+        field: "flavours",
+        key: "creamy",
+        message: "Creamy dishes are often high in lactose",
+      },
+    ]);
+  });
 });

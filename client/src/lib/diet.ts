@@ -129,6 +129,17 @@ export function dietConflicts(settings: Settings): DietConflict[] {
       }
       break;
     }
+    case "lactose_free": {
+      // Hard cheeses/butter are low-lactose, so "cheesy" is fine; milk/cream are high.
+      if (flavours.has("creamy")) {
+        conflicts.push({
+          field: "flavours",
+          key: "creamy",
+          message: "Creamy dishes are often high in lactose",
+        });
+      }
+      break;
+    }
     case "none":
     default:
       break;

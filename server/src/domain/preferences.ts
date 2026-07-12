@@ -110,6 +110,7 @@ export const DIETS = [
   "low_fodmap",
   "gluten_free",
   "dairy_free",
+  "lactose_free",
 ] as const;
 
 export const VEGETABLES = [
