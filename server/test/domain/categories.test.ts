@@ -23,6 +23,14 @@ describe("canonicalCategory", () => {
     expect(canonicalCategory("bouillon powder", "pantry")).toBe("bulk_staples");
   });
 
+  it("reclassifies butter and breadcrumbs (bought in bulk, reused across weeks)", () => {
+    expect(canonicalCategory("butter", "dairy")).toBe("bulk_staples");
+    expect(canonicalCategory("unsalted butter", "dairy")).toBe("bulk_staples");
+    expect(canonicalCategory("breadcrumbs", "pantry")).toBe("bulk_staples");
+    expect(canonicalCategory("dried bread crumbs", "pantry")).toBe("bulk_staples");
+    expect(canonicalCategory("panko", "pantry")).toBe("bulk_staples");
+  });
+
   it("is case-insensitive on the name", () => {
     expect(canonicalCategory("Basmati Rice", "grains")).toBe("bulk_staples");
     expect(canonicalCategory("CANNED CHICKPEAS", "pantry")).toBe("bulk_staples");

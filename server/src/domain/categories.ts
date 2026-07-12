@@ -21,6 +21,11 @@ const BULK_STAPLE_KEYWORDS: readonly string[] = [
   "couscous",
   "quinoa",
   "lentil",
+  // bulk fats & coatings — bought in bulk and reused across weeks
+  "butter",
+  "breadcrumb",
+  "bread crumb",
+  "panko",
   // canned / jarred shelf-stable goods
   "canned",
   "tinned",
