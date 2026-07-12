@@ -1,10 +1,27 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { PlanBundle, PlanSummary } from "../../src/types";
+import type { MealSchedule, PlanBundle, PlanSummary, Settings } from "../../src/types";
+import { SLOT_ORDER } from "../../src/lib/meal";
 import { Dashboard } from "../../src/pages/Dashboard";
 
 vi.mock("../../src/api/client");
 import * as api from "../../src/api/client";
+
+function allOnSchedule(): MealSchedule {
+  return Object.fromEntries(
+    SLOT_ORDER.map((slot) => [slot, Array(7).fill(true)]),
+  ) as MealSchedule;
+}
+
+const settings: Settings = {
+  members: [],
+  restrictions: [],
+  avoidIngredients: [],
+  proteinCadence: { veg_per_week: 2, red_or_high_fat_per_week: 2 },
+  effort: "medium",
+  defaultVegQuantities: {},
+  mealSchedule: allOnSchedule(),
+};
 
 const summary: PlanSummary = {
   id: 5,
@@ -18,7 +35,7 @@ const bundle: PlanBundle = {
   plan: {
     id: 5,
     weekStart: "2026-07-13",
-    vegBox: ["leek", "squash"],
+    onHand: ["leek", "squash"],
     note: "quick meals",
     status: "active",
     meals: [
@@ -39,9 +56,8 @@ const bundle: PlanBundle = {
     ],
   },
   shopping: [
-    { name: "Leek", totalQuantity: 2, unit: "pcs", category: "Produce", checked: false },
+    { name: "Leek", totalQuantity: 2, unit: "pcs", category: "produce", checked: false },
   ],
-  unusedVeg: ["squash"],
 };
 
 afterEach(() => {
@@ -50,6 +66,7 @@ afterEach(() => {
 
 describe("Dashboard", () => {
   test("shows the empty-state invite when there are no plans", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(settings);
     vi.mocked(api.listPlans).mockResolvedValue([]);
 
     render(<Dashboard selectedPlanId={null} onSelectPlan={vi.fn()} />);
@@ -59,18 +76,19 @@ describe("Dashboard", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders the coverage strip and week board when a plan exists", async () => {
+  test("renders the week board and shopping list when a plan exists", async () => {
+    vi.mocked(api.getSettings).mockResolvedValue(settings);
     vi.mocked(api.listPlans).mockResolvedValue([summary]);
     vi.mocked(api.getPlan).mockResolvedValue(bundle);
 
     render(<Dashboard selectedPlanId={null} onSelectPlan={vi.fn()} />);
 
     await waitFor(() =>
-      expect(screen.getByLabelText(/veg box coverage/i)).toBeInTheDocument(),
+      expect(screen.getByLabelText(/week board/i)).toBeInTheDocument(),
     );
-    expect(screen.getByLabelText(/week board/i)).toBeInTheDocument();
     expect(screen.getByText("Leek and potato soup")).toBeInTheDocument();
-    // Unused veg flare shows on the coverage strip.
-    expect(screen.getByText(/not used yet/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/shopping list/i)).toBeInTheDocument();
+    // The removed coverage strip should not appear.
+    expect(screen.queryByLabelText(/veg box coverage/i)).not.toBeInTheDocument();
   });
 });

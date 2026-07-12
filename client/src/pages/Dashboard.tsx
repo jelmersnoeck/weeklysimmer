@@ -2,16 +2,24 @@ import { useCallback, useEffect, useState } from "react";
 import type {
   GeneratePlanInput,
   Meal,
+  MealSchedule,
   PlanBundle,
   PlanSummary,
 } from "../types";
-import { generatePlan, getPlan, listPlans } from "../api/client";
+import { generatePlan, getPlan, getSettings, listPlans } from "../api/client";
 import { MealDetail } from "../components/MealDetail";
 import { NewWeekForm } from "../components/NewWeekForm";
 import { ShoppingList } from "../components/ShoppingList";
-import { VegCoverageStrip } from "../components/VegCoverageStrip";
 import { WeekGrid } from "../components/WeekGrid";
+import { SLOT_ORDER } from "../lib/meal";
 import "./Dashboard.css";
+
+// Fallback schedule (all meals on) when settings haven't loaded yet.
+function allOnSchedule(): MealSchedule {
+  return Object.fromEntries(
+    SLOT_ORDER.map((slot) => [slot, Array(7).fill(true)]),
+  ) as MealSchedule;
+}
 
 interface DashboardProps {
   // Which plan to show; null means "the most recent plan".
@@ -39,6 +47,24 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [openMeal, setOpenMeal] = useState<Meal | null>(null);
+  const [defaultSchedule, setDefaultSchedule] =
+    useState<MealSchedule>(allOnSchedule);
+
+  useEffect(() => {
+    let active = true;
+    getSettings()
+      .then((settings) => {
+        if (active && settings.mealSchedule) {
+          setDefaultSchedule(settings.mealSchedule);
+        }
+      })
+      .catch(() => {
+        // Non-fatal: fall back to the all-on default schedule.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     setStatus("loading");
@@ -81,7 +107,6 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
       setBundle({
         plan: result.plan,
         shopping: result.shopping,
-        unusedVeg: result.unusedVeg,
       });
       setRecentTitles(result.plan.meals.map((m) => m.title));
       setShowForm(false);
@@ -160,7 +185,8 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
           <div className="dashboard__empty">
             <h2 className="dashboard__empty-title">No plans yet</h2>
             <p className="dashboard__empty-copy">
-              Turn this week's veg box into a set of meals and a shopping list.
+              Turn the foods you have on hand into a set of meals and a shopping
+              list.
             </p>
             <button
               type="button"
@@ -180,6 +206,7 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
             <NewWeekForm
               onGenerate={handleGenerate}
               recentTitles={recentTitles}
+              defaultSchedule={defaultSchedule}
               onCancel={status === "empty" ? undefined : () => setShowForm(false)}
               submitting={submitting}
             />
@@ -209,11 +236,6 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
           New week
         </button>
       </div>
-
-      <VegCoverageStrip
-        vegBox={bundle.plan.vegBox}
-        unusedVeg={bundle.unusedVeg}
-      />
 
       <WeekGrid plan={bundle.plan} onSelectMeal={setOpenMeal} />
 
