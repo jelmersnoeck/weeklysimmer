@@ -6,9 +6,11 @@ import "./WeekGrid.css";
 interface WeekGridProps {
   plan: WeeklyPlan;
   onSelectMeal: (meal: Meal) => void;
+  // Foods the household already had on hand, for the "uses your ingredients" marker.
+  onHand?: string[];
 }
 
-export function WeekGrid({ plan, onSelectMeal }: WeekGridProps) {
+export function WeekGrid({ plan, onSelectMeal, onHand = [] }: WeekGridProps) {
   const byDay: Meal[][] = Array.from({ length: 7 }, () => []);
   const usedSlots = new Set<Meal["slot"]>();
   for (const meal of plan.meals) {
@@ -42,7 +44,11 @@ export function WeekGrid({ plan, onSelectMeal }: WeekGridProps) {
                   <div key={slot} className="week-grid__slot">
                     <span className="week-grid__slot-label">{slotLabel(slot)}</span>
                     {meal ? (
-                      <MealCard meal={meal} onSelect={onSelectMeal} />
+                      <MealCard
+                        meal={meal}
+                        onSelect={onSelectMeal}
+                        onHand={onHand}
+                      />
                     ) : (
                       <p className="week-grid__empty">No meal</p>
                     )}

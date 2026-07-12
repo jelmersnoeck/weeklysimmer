@@ -1,9 +1,11 @@
 import { useState } from "react";
-import type { ShoppingItem } from "../types";
+import type { MeasurementSystem, ShoppingItem } from "../types";
+import { formatQuantity } from "../lib/quantity";
 import "./ShoppingList.css";
 
 interface ShoppingListProps {
   items: ShoppingItem[];
+  units?: MeasurementSystem[];
 }
 
 // Friendly, human-readable names for known shopping categories.
@@ -44,7 +46,7 @@ function groupByCategory(items: ShoppingItem[]): [string, ShoppingItem[]][] {
   });
 }
 
-export function ShoppingList({ items }: ShoppingListProps) {
+export function ShoppingList({ items, units = ["metric"] }: ShoppingListProps) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(items.map((i) => [i.name, i.checked])),
   );
@@ -93,8 +95,15 @@ export function ShoppingList({ items }: ShoppingListProps) {
                     <label htmlFor={id} className="shopping__item-label">
                       <span className="shopping__item-name">{item.name}</span>
                       <span className="mono shopping__item-qty">
-                        {item.totalQuantity}
-                        {item.unit ? ` ${item.unit}` : ""}
+                        {formatQuantity(
+                          {
+                            quantity: item.totalQuantity,
+                            unit: item.unit,
+                            cupQuantity: item.cupQuantity,
+                            cupUnit: item.cupUnit,
+                          },
+                          units,
+                        )}
                       </span>
                     </label>
                   </li>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Meal, PlanBundle } from "../types";
+import type { Meal, MeasurementSystem, PlanBundle } from "../types";
 import { rateMeal, regenerateMeal } from "../api/client";
 import {
   DAY_LABELS_LONG,
@@ -9,11 +9,15 @@ import {
   proteinTagVariant,
   slotLabel,
 } from "../lib/meal";
+import { mealUsesOnHand } from "../lib/onHand";
+import { formatQuantity } from "../lib/quantity";
 import "./MealDetail.css";
 
 interface MealDetailProps {
   meal: Meal;
   planId: number;
+  units?: MeasurementSystem[];
+  onHand?: string[];
   onClose: () => void;
   onRated: (rating: number) => void;
   onRegenerated: (bundle: PlanBundle) => void;
@@ -24,12 +28,15 @@ const STARS = [1, 2, 3, 4, 5];
 export function MealDetail({
   meal,
   planId,
+  units = ["metric"],
+  onHand = [],
   onClose,
   onRated,
   onRegenerated,
 }: MealDetailProps) {
   const [rating, setRating] = useState<number>(meal.rating ?? 0);
   const totalMinutes = mealTotalMinutes(meal);
+  const usesOnHand = mealUsesOnHand(meal, onHand);
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,14 +137,20 @@ export function MealDetail({
         </div>
       </div>
 
+      {usesOnHand.length > 0 && (
+        <p className="meal-detail__onhand" role="note">
+          <span aria-hidden="true">🌿</span> Uses what you had:{" "}
+          {usesOnHand.join(", ")}
+        </p>
+      )}
+
       <section className="meal-detail__section">
         <h3 className="meal-detail__section-heading">Ingredients</h3>
         <ul className="meal-detail__ingredients">
           {meal.ingredients.map((ing) => (
             <li key={ing.name} className="meal-detail__ingredient">
               <span className="mono meal-detail__qty">
-                {ing.quantity}
-                {ing.unit ? ` ${ing.unit}` : ""}
+                {formatQuantity(ing, units)}
               </span>
               <span>{ing.name}</span>
             </li>

@@ -3,6 +3,7 @@ import type {
   GeneratePlanInput,
   Meal,
   MealSchedule,
+  MeasurementSystem,
   PlanBundle,
   PlanSummary,
 } from "../types";
@@ -33,6 +34,8 @@ interface DashboardProps {
   // Which plan to show; null means "the most recent plan".
   selectedPlanId: number | null;
   onSelectPlan: (id: number | null) => void;
+  // Measurement systems to render quantities in; defaults to metric.
+  units?: MeasurementSystem[];
 }
 
 type Status = "loading" | "empty" | "ready" | "error";
@@ -55,7 +58,11 @@ function formatWeek(weekStart: string): string {
   });
 }
 
-export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
+export function Dashboard({
+  selectedPlanId,
+  onSelectPlan,
+  units = ["metric"],
+}: DashboardProps) {
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
   const [bundle, setBundle] = useState<PlanBundle | null>(null);
@@ -334,9 +341,13 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
         </button>
       </div>
 
-      <WeekGrid plan={bundle.plan} onSelectMeal={setOpenMeal} />
+      <WeekGrid
+        plan={bundle.plan}
+        onSelectMeal={setOpenMeal}
+        onHand={bundle.plan.onHand}
+      />
 
-      <ShoppingList key={bundle.plan.id} items={bundle.shopping} />
+      <ShoppingList key={bundle.plan.id} items={bundle.shopping} units={units} />
 
       {openMeal && (
         <div
@@ -348,6 +359,8 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
           <MealDetail
             meal={openMeal}
             planId={bundle.plan.id}
+            units={units}
+            onHand={bundle.plan.onHand}
             onClose={() => setOpenMeal(null)}
             onRated={handleRated}
             onRegenerated={handleRegenerated}

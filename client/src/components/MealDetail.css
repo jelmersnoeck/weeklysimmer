@@ -83,6 +83,16 @@
   color: var(--squash);
 }
 
+.meal-detail__onhand {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--herb-tint);
+  color: var(--herb);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .meal-detail__section-heading {
   font-size: 1rem;
   margin-bottom: var(--space-3);
