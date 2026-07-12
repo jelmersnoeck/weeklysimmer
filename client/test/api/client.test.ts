@@ -17,15 +17,19 @@ afterEach(() => {
 describe("generatePlan", () => {
   test("POSTs to /api/plans/generate with the right body", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ planId: 7, plan: {}, shopping: [], unusedVeg: [] }, true, 201),
+      jsonResponse({ planId: 7, plan: {}, shopping: [] }, true, 201),
     );
     vi.stubGlobal("fetch", fetchMock);
 
     const input = {
       weekStart: "2026-07-13",
-      vegBox: ["leek", "kale"],
+      onHand: ["leek", "kale"],
       note: "quick meals",
       avoid: ["Chili"],
+      enabledSlots: [
+        { day: 0, slot: "breakfast" as const },
+        { day: 0, slot: "dinner" as const },
+      ],
     };
     const result = await generatePlan(input);
 

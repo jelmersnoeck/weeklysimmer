@@ -10,6 +10,13 @@ export type Slot =
 export type Difficulty = "easy" | "medium" | "hard";
 export type PlanStatus = "draft" | "active" | "archived";
 
+// Which meals to plan, per slot, across the 7 days of the week.
+// Each slot maps to 7 booleans (index 0 = Mon .. 6 = Sun).
+export type MealSchedule = Record<Slot, boolean[]>;
+
+// A single enabled meal in the week: which day, which slot.
+export type EnabledSlot = { day: number; slot: Slot };
+
 export interface Ingredient {
   name: string;
   quantity: number;
@@ -28,6 +35,7 @@ export interface Meal {
   difficulty: Difficulty;
   prepMinutes?: number;
   cookMinutes?: number;
+  caloriesPerServing?: number; // kcal for one person's serving; absent on older meals.
   ingredients: Ingredient[];
   steps: string[];
   sourceUrl?: string;
@@ -38,7 +46,7 @@ export interface Meal {
 export interface WeeklyPlan {
   id: number;
   weekStart: string;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   status: PlanStatus;
   meals: Meal[];
@@ -67,13 +75,13 @@ export interface Settings {
   };
   effort: string;
   defaultVegQuantities: Record<string, unknown>;
+  mealSchedule: MealSchedule;
 }
 
 // A full plan payload as returned by GET /api/plans/:id and generate.
 export interface PlanBundle {
   plan: WeeklyPlan;
   shopping: ShoppingItem[];
-  unusedVeg: string[];
 }
 
 // Row in the plans list (GET /api/plans).
@@ -89,9 +97,10 @@ export interface PlanSummary {
 
 export interface GeneratePlanInput {
   weekStart: string;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   avoid: string[];
+  enabledSlots: EnabledSlot[];
 }
 
 export interface GeneratePlanResult extends PlanBundle {
