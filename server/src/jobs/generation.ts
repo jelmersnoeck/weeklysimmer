@@ -3,6 +3,7 @@ import type { PlanCurator } from "../llm/anthropicClient.js";
 import type { JobStore } from "./registry.js";
 import { generatePlan, type GeneratePlanInput } from "../llm/curationService.js";
 import { savePlan, saveShoppingItems } from "../db/plansRepo.js";
+import { log, logError } from "../log.js";
 
 export interface GenerationDeps {
   db: Database.Database;
@@ -25,6 +26,12 @@ export function enqueueGeneration(
 ): { jobId: string; done: Promise<void> } {
   const { db, curator, store } = deps;
   const job = store.createJob(input.weekStart);
+  const startedAt = Date.now();
+
+  log(
+    "generate",
+    `job ${job.id} queued — week ${input.weekStart}, ${input.onHand.length} foods on hand, ${input.enabledSlots.length} meals requested`,
+  );
 
   const done = (async () => {
     try {
@@ -32,10 +39,16 @@ export function enqueueGeneration(
       const planId = savePlan(db, plan);
       saveShoppingItems(db, planId, shopping);
       store.markDone(job.id, planId);
+      const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
+      log(
+        "generate",
+        `job ${job.id} done — plan ${planId}, ${plan.meals.length} meals, ${shopping.length} shopping items (${secs}s)`,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       store.markError(job.id, message);
-      console.error(`[generate] job ${job.id} failed:`, err);
+      log("generate", `job ${job.id} failed: ${message}`);
+      logError("generate", `job ${job.id} failed`, err);
     }
   })();
 

@@ -9,6 +9,7 @@ import type {
   WeeklyPlan,
 } from "../domain/types.js";
 import type { PlanCurator } from "./anthropicClient.js";
+import { log } from "../log.js";
 
 export interface GeneratePlanInput {
   weekStart: string;
@@ -36,7 +37,15 @@ export async function generatePlan(
   input: GeneratePlanInput,
 ): Promise<GeneratePlanResult> {
   const settings = getSettings(db);
+
+  log(
+    "llm",
+    `requesting ${input.enabledSlots.length}-meal plan from Claude (web search)…`,
+  );
+  const llmStart = Date.now();
   const raw = await curator.curate({ settings, ...input });
+  const llmSecs = ((Date.now() - llmStart) / 1000).toFixed(1);
+  log("llm", `Claude returned ${raw.meals.length} meals in ${llmSecs}s`);
 
   // Two meals sharing a (day, slot) corrupt the shopping list and the UI only
   // shows the first — reject rather than silently drop one. (A slightly short
