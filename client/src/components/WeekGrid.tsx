@@ -1,5 +1,5 @@
 import type { Meal, WeeklyPlan } from "../types";
-import { DAY_LABELS, DAY_LABELS_LONG, SLOTS, slotLabel } from "../lib/meal";
+import { DAY_LABELS, DAY_LABELS_LONG, SLOT_ORDER, slotLabel } from "../lib/meal";
 import { MealCard } from "./MealCard";
 import "./WeekGrid.css";
 
@@ -30,7 +30,7 @@ export function WeekGrid({ plan, onSelectMeal }: WeekGridProps) {
               <span className="week-grid__day-long">{DAY_LABELS_LONG[day]}</span>
             </h3>
             <div className="week-grid__slots">
-              {SLOTS.map((slot) => {
+              {SLOT_ORDER.map((slot) => {
                 const meal = meals.find((m) => m.slot === slot);
                 return (
                   <div key={slot} className="week-grid__slot">
