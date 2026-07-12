@@ -22,6 +22,8 @@ export interface Ingredient {
   quantity: number;
   unit: string;
   category: string;
+  cupQuantity?: number;
+  cupUnit?: string;
 }
 
 export interface Meal {
@@ -58,6 +60,8 @@ export interface ShoppingItem {
   unit: string;
   category: string;
   checked: boolean;
+  cupQuantity?: number;
+  cupUnit?: string;
 }
 
 // --- Settings v2 — household food preferences. ---
@@ -65,15 +69,10 @@ export interface ShoppingItem {
 export type Frequency = "never" | "occasionally" | "weekly" | "often";
 export type Appetite = "light" | "standard" | "hearty" | "very_active";
 export type MemberType = "adult" | "child" | "toddler" | "baby";
-export type Diet =
-  | "none"
-  | "vegetarian"
-  | "vegan"
-  | "pescatarian"
-  | "low_fodmap"
-  | "gluten_free"
-  | "dairy_free"
-  | "lactose_free";
+export type Diet = "vegetarian" | "vegan" | "pescatarian" | "low_fodmap";
+
+// Which measurement systems to show quantities in. At least one is always set.
+export type MeasurementSystem = "metric" | "cups";
 
 export interface HouseholdMember {
   id: string;
@@ -97,7 +96,8 @@ export interface Settings {
   dishTypesLiked: string[];
   flavoursLiked: string[];
   avoid: string[];
-  diet: Diet;
+  diets: Diet[];
+  units: MeasurementSystem[];
   effort: "easy" | "medium" | "hard";
   // Which meals to plan per slot; NOT edited on the settings screen — carried through as-is.
   mealSchedule: MealSchedule;
@@ -111,6 +111,7 @@ export interface Options {
   flavours: string[];
   avoids: string[];
   diets: string[];
+  measurementSystems: MeasurementSystem[];
   vegetables: string[];
   fruits: string[];
   frequencies: string[];

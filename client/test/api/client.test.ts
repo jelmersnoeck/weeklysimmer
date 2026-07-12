@@ -86,7 +86,8 @@ const sampleSettings: Settings = {
   dishTypesLiked: [],
   flavoursLiked: [],
   avoid: [],
-  diet: "none",
+  diets: [],
+  units: ["metric"],
   effort: "easy",
   mealSchedule: Object.fromEntries(
     SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),

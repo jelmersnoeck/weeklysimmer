@@ -13,8 +13,9 @@ const options: Options = {
   cuisines: ["italian"],
   dishTypes: ["pasta", "salad"],
   flavours: ["cheesy", "herby"],
-  avoids: ["dairy"],
-  diets: ["none", "vegan"],
+  avoids: ["dairy", "lactose"],
+  diets: ["vegetarian", "vegan"],
+  measurementSystems: ["metric", "cups"],
   vegetables: ["carrot", "broccoli"],
   fruits: ["apple"],
   frequencies: ["never", "occasionally", "weekly", "often"],
@@ -39,7 +40,8 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     dishTypesLiked: [],
     flavoursLiked: [],
     avoid: [],
-    diet: "none",
+    diets: [],
+    units: ["metric"],
     effort: "medium",
     mealSchedule: Object.fromEntries(
       SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),
@@ -100,7 +102,7 @@ describe("Settings screen", () => {
     const user = userEvent.setup();
     render(
       <SettingsScreen
-        initial={makeSettings({ diet: "vegan" })}
+        initial={makeSettings({ diets: ["vegan"] })}
         options={options}
         mode="edit"
         onSaved={vi.fn()}
@@ -147,6 +149,94 @@ describe("Settings screen", () => {
     // mealSchedule carried through unchanged.
     expect(draftSent.mealSchedule).toEqual(initial.mealSchedule);
     expect(onSaved).toHaveBeenCalledWith(returned);
+  });
+
+  test("renders the Units section and the lactose avoid chip", () => {
+    render(
+      <SettingsScreen
+        initial={makeSettings()}
+        options={options}
+        mode="edit"
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: /^units$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^metric$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^cups$/i })).toBeInTheDocument();
+    // lactose comes straight from options.avoids.
+    expect(screen.getByRole("button", { name: /^lactose$/i })).toBeInTheDocument();
+  });
+
+  test("diet is multi-select — toggling adds and removes membership", async () => {
+    const user = userEvent.setup();
+    render(
+      <SettingsScreen
+        initial={makeSettings()}
+        options={options}
+        mode="edit"
+        onSaved={vi.fn()}
+      />,
+    );
+
+    const veg = screen.getByRole("button", { name: /^vegetarian$/i });
+    const vegan = screen.getByRole("button", { name: /^vegan$/i });
+    expect(veg).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(veg);
+    await user.click(vegan);
+    expect(veg).toHaveAttribute("aria-pressed", "true");
+    expect(vegan).toHaveAttribute("aria-pressed", "true");
+
+    // Toggling off removes it again.
+    await user.click(veg);
+    expect(veg).toHaveAttribute("aria-pressed", "false");
+    expect(vegan).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("units keeps at least one system selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <SettingsScreen
+        initial={makeSettings({ units: ["metric"] })}
+        options={options}
+        mode="edit"
+        onSaved={vi.fn()}
+      />,
+    );
+
+    const metric = screen.getByRole("button", { name: /^metric$/i });
+    expect(metric).toHaveAttribute("aria-pressed", "true");
+    // Removing the last one is blocked.
+    await user.click(metric);
+    expect(metric).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("saving includes the selected diets and units", async () => {
+    const user = userEvent.setup();
+    const initial = makeSettings({ diets: [], units: ["metric"] });
+    vi.mocked(api.updateSettings).mockResolvedValue({
+      settings: initial,
+      conflicts: [],
+    });
+
+    render(
+      <SettingsScreen
+        initial={initial}
+        options={options}
+        mode="edit"
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /^vegetarian$/i }));
+    await user.click(screen.getByRole("button", { name: /^cups$/i }));
+    await user.click(screen.getByRole("button", { name: /save preferences/i }));
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalledTimes(1));
+    const draftSent = vi.mocked(api.updateSettings).mock.calls[0][0];
+    expect(draftSent.diets).toContain("vegetarian");
+    expect(draftSent.units).toEqual(["metric", "cups"]);
   });
 
   test("blocks removing the last household member", () => {

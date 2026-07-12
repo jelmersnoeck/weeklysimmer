@@ -30,7 +30,8 @@ const settings: Settings = {
   dishTypesLiked: [],
   flavoursLiked: [],
   avoid: [],
-  diet: "none",
+  diets: [],
+  units: ["metric"],
   effort: "medium",
   mealSchedule: allOnSchedule(),
 };

@@ -7,14 +7,19 @@ describe("labelize", () => {
     expect(labelize("morning_snack")).toBe("Morning snack");
   });
 
+  test("avoid keys labelize sensibly via the default rule", () => {
+    expect(labelize("lactose")).toBe("Lactose");
+    expect(labelize("dairy")).toBe("Dairy");
+    expect(labelize("gluten")).toBe("Gluten");
+  });
+
   test("applies special cases", () => {
     expect(labelize("white_fish")).toBe("White fish");
     expect(labelize("beans_legumes")).toBe("Beans & legumes");
     expect(labelize("halloumi_paneer")).toBe("Halloumi / paneer");
     expect(labelize("low_fodmap")).toBe("Low-FODMAP");
-    expect(labelize("gluten_free")).toBe("Gluten-free");
-    expect(labelize("dairy_free")).toBe("Dairy-free");
-    expect(labelize("lactose_free")).toBe("Lactose-free");
+    expect(labelize("metric")).toBe("Metric");
+    expect(labelize("cups")).toBe("Cups");
     expect(labelize("child")).toBe("Child (3+)");
     expect(labelize("toddler")).toBe("Toddler (1–3)");
     expect(labelize("baby")).toBe("Baby (under 1)");

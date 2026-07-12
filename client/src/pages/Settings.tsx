@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type {
   DietConflict,
+  MeasurementSystem,
   Options,
   ProteinPref,
   Settings as SettingsType,
@@ -104,6 +105,19 @@ export function Settings({ initial, options, mode, onSaved }: SettingsProps) {
     patch({ household: draft.household.filter((m) => m.id !== id) });
   }
 
+  // --- Diet (multi-select) ---
+  function toggleDiet(key: string) {
+    patch({ diets: toggle(draft.diets, key) as SettingsType["diets"] });
+  }
+
+  // --- Units (multi-select, at least one) ---
+  function toggleUnit(key: string) {
+    const has = draft.units.includes(key as MeasurementSystem);
+    // Keep at least one system selected.
+    if (has && draft.units.length <= 1) return;
+    patch({ units: toggle(draft.units, key) as SettingsType["units"] });
+  }
+
   // --- Proteins ---
   function setProteinFrequency(key: string, frequency: string) {
     patch({
@@ -118,6 +132,10 @@ export function Settings({ initial, options, mode, onSaved }: SettingsProps) {
   async function handleSave() {
     if (draft.household.length < 1) {
       setError("Add at least one household member.");
+      return;
+    }
+    if (draft.units.length < 1) {
+      setError("Pick at least one measurement system.");
       return;
     }
     setSubmitting(true);
@@ -323,29 +341,25 @@ export function Settings({ initial, options, mode, onSaved }: SettingsProps) {
         tone="avoid"
       />
 
-      {/* Diet */}
-      <section className="settings__section" aria-labelledby="set-diet">
-        <h3 className="settings__section-title" id="set-diet">
-          Diet
-        </h3>
-        <div className="settings__radios" role="radiogroup" aria-labelledby="set-diet">
-          {options.diets.map((d) => (
-            <label
-              key={d}
-              className={`settings__radio${draft.diet === d ? " is-selected" : ""}`}
-            >
-              <input
-                type="radio"
-                name="diet"
-                value={d}
-                checked={draft.diet === d}
-                onChange={() => patch({ diet: d as SettingsType["diet"] })}
-              />
-              {labelize(d)}
-            </label>
-          ))}
-        </div>
-      </section>
+      {/* Diet — multi-select; zero selected means no framework. */}
+      <ChipSection
+        id="set-diet"
+        title="Diet"
+        hint="Pick any that apply, or leave all off for no framework."
+        keys={options.diets}
+        selected={draft.diets}
+        onToggle={toggleDiet}
+      />
+
+      {/* Units — at least one measurement system stays selected. */}
+      <ChipSection
+        id="set-units"
+        title="Units"
+        hint="How should we show quantities? Keep at least one."
+        keys={options.measurementSystems}
+        selected={draft.units}
+        onToggle={toggleUnit}
+      />
 
       {/* Effort */}
       <section className="settings__section" aria-labelledby="set-effort">

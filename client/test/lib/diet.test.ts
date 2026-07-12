@@ -14,7 +14,8 @@ function base(overrides: Partial<Settings> = {}): Settings {
     dishTypesLiked: [],
     flavoursLiked: [],
     avoid: [],
-    diet: "none",
+    diets: [],
+    units: ["metric"],
     effort: "medium",
     mealSchedule: Object.fromEntries(
       SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),
@@ -24,12 +25,13 @@ function base(overrides: Partial<Settings> = {}): Settings {
 }
 
 function withDiet(diet: Diet, overrides: Partial<Settings> = {}): Settings {
-  return base({ diet, ...overrides });
+  return base({ diets: [diet], ...overrides });
 }
 
 describe("dietConflicts", () => {
-  test("none yields no conflicts even with meat selected", () => {
-    const s = withDiet("none", {
+  test("no diets selected yields no conflicts even with meat selected", () => {
+    const s = base({
+      diets: [],
       proteins: [{ key: "beef", frequency: "weekly" }],
     });
     expect(dietConflicts(s)).toEqual([]);
@@ -126,52 +128,44 @@ describe("dietConflicts", () => {
     ]);
   });
 
-  test("gluten_free flags pasta and wraps/tacos dish types", () => {
-    const s = withDiet("gluten_free", {
-      dishTypesLiked: ["pasta", "wraps_tacos"],
+  test("unions conflicts across multiple selected diets", () => {
+    const s = base({
+      diets: ["vegetarian", "low_fodmap"],
+      proteins: [
+        { key: "chicken", frequency: "weekly" },
+        { key: "beans_legumes", frequency: "weekly" },
+      ],
+      flavoursLiked: ["garlicky"],
     });
-    expect(dietConflicts(s)).toEqual([
-      {
-        field: "dishTypes",
-        key: "pasta",
-        message: "Pasta usually contains gluten",
-      },
-      {
-        field: "dishTypes",
-        key: "wraps_tacos",
-        message: "Wraps/tacos usually contain gluten",
-      },
-    ]);
+    const c = dietConflicts(s);
+    // Vegetarian flags chicken; low_fodmap flags beans and garlicky.
+    expect(c).toContainEqual({
+      field: "proteins",
+      key: "chicken",
+      message: "Chicken isn't vegetarian",
+    });
+    expect(c).toContainEqual({
+      field: "proteins",
+      key: "beans_legumes",
+      message: "Beans are high-FODMAP",
+    });
+    expect(c).toContainEqual({
+      field: "flavours",
+      key: "garlicky",
+      message: "Garlic is high-FODMAP",
+    });
   });
 
-  test("dairy_free flags cheesy and creamy flavours", () => {
-    const s = withDiet("dairy_free", {
-      flavoursLiked: ["cheesy", "creamy"],
+  test("dedupes a conflict shared by two selected diets by field|key", () => {
+    // Both vegetarian and vegan flag chicken; it should appear only once.
+    const s = base({
+      diets: ["vegetarian", "vegan"],
+      proteins: [{ key: "chicken", frequency: "weekly" }],
     });
-    expect(dietConflicts(s)).toEqual([
-      {
-        field: "flavours",
-        key: "cheesy",
-        message: "Cheese isn't dairy-free",
-      },
-      {
-        field: "flavours",
-        key: "creamy",
-        message: "Creamy dishes often use dairy",
-      },
-    ]);
-  });
-
-  test("lactose_free flags creamy but not cheesy", () => {
-    const s = withDiet("lactose_free", {
-      flavoursLiked: ["cheesy", "creamy"],
-    });
-    expect(dietConflicts(s)).toEqual([
-      {
-        field: "flavours",
-        key: "creamy",
-        message: "Creamy dishes are often high in lactose",
-      },
-    ]);
+    const c = dietConflicts(s);
+    const chickenConflicts = c.filter((x) => x.key === "chicken");
+    expect(chickenConflicts).toHaveLength(1);
+    // The first-selected diet (vegetarian) wins the message.
+    expect(chickenConflicts[0].message).toBe("Chicken isn't vegetarian");
   });
 });

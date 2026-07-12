@@ -3,7 +3,7 @@
 // also returns its own conflicts on save; this is purely for instant feedback.
 // A protein counts as "selected" when its frequency is not "never".
 
-import type { DietConflict, Settings } from "../types";
+import type { Diet, DietConflict, Settings } from "../types";
 import { labelize } from "./labels";
 
 // Proteins that are neither vegetarian nor vegan (meat + fish + shellfish).
@@ -28,13 +28,14 @@ function selectedProteins(settings: Settings): string[] {
     .map((p) => p.key);
 }
 
-export function dietConflicts(settings: Settings): DietConflict[] {
+// Conflicts for a single diet framework. The public dietConflicts() unions
+// these across every selected diet and dedupes by field|key.
+function conflictsForDiet(diet: Diet, settings: Settings): DietConflict[] {
   const conflicts: DietConflict[] = [];
   const selected = selectedProteins(settings);
   const flavours = new Set(settings.flavoursLiked);
-  const dishes = new Set(settings.dishTypesLiked);
 
-  switch (settings.diet) {
+  switch (diet) {
     case "vegetarian": {
       for (const key of selected) {
         if (MEAT_AND_FISH.has(key)) {
@@ -95,55 +96,23 @@ export function dietConflicts(settings: Settings): DietConflict[] {
       }
       break;
     }
-    case "gluten_free": {
-      if (dishes.has("pasta")) {
-        conflicts.push({
-          field: "dishTypes",
-          key: "pasta",
-          message: "Pasta usually contains gluten",
-        });
-      }
-      if (dishes.has("wraps_tacos")) {
-        conflicts.push({
-          field: "dishTypes",
-          key: "wraps_tacos",
-          message: "Wraps/tacos usually contain gluten",
-        });
-      }
-      break;
-    }
-    case "dairy_free": {
-      if (flavours.has("cheesy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "cheesy",
-          message: "Cheese isn't dairy-free",
-        });
-      }
-      if (flavours.has("creamy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "creamy",
-          message: "Creamy dishes often use dairy",
-        });
-      }
-      break;
-    }
-    case "lactose_free": {
-      // Hard cheeses/butter are low-lactose, so "cheesy" is fine; milk/cream are high.
-      if (flavours.has("creamy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "creamy",
-          message: "Creamy dishes are often high in lactose",
-        });
-      }
-      break;
-    }
-    case "none":
-    default:
-      break;
   }
 
   return conflicts;
+}
+
+// Union of the conflicts across every selected diet, deduped by field|key.
+// Zero selected diets means no framework and so no conflicts.
+export function dietConflicts(settings: Settings): DietConflict[] {
+  const out: DietConflict[] = [];
+  const seen = new Set<string>();
+  for (const diet of settings.diets) {
+    for (const conflict of conflictsForDiet(diet, settings)) {
+      const id = `${conflict.field}|${conflict.key}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(conflict);
+    }
+  }
+  return out;
 }
