@@ -57,7 +57,7 @@ describe("GET /api/options", () => {
     expect(res.body.fruits).toContain("berries");
     expect(res.body.frequencies).toEqual(["never", "occasionally", "weekly", "often"]);
     expect(res.body.appetites).toContain("hearty");
-    expect(res.body.memberTypes).toEqual(["adult", "child"]);
+    expect(res.body.memberTypes).toEqual(["adult", "child", "toddler", "baby"]);
     expect(res.body.appetiteFactor.adult.hearty).toBe(1.2);
     expect(res.body.appetiteFactor.child.standard).toBe(0.5);
     db.close();

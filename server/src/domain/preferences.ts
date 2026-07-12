@@ -43,7 +43,7 @@ export const APPETITES: readonly Appetite[] = [
   "very_active",
 ];
 
-export const MEMBER_TYPES: readonly MemberType[] = ["adult", "child"];
+export const MEMBER_TYPES: readonly MemberType[] = ["adult", "child", "toddler", "baby"];
 
 export const CUISINES = [
   "italian",
@@ -147,6 +147,8 @@ export const FRUITS = [
 export const APPETITE_FACTOR: Record<MemberType, Record<Appetite, number>> = {
   adult: { light: 0.9, standard: 1.0, hearty: 1.2, very_active: 1.4 },
   child: { light: 0.4, standard: 0.5, hearty: 0.7, very_active: 0.9 },
+  toddler: { light: 0.25, standard: 0.35, hearty: 0.5, very_active: 0.6 },
+  baby: { light: 0.1, standard: 0.15, hearty: 0.2, very_active: 0.25 },
 };
 
 /** The portion factor a single member contributes to the household serving count. */
@@ -187,7 +189,7 @@ export function defaultSettings(): Settings {
     household: [
       { id: "a1", type: "adult", appetite: "hearty" },
       { id: "a2", type: "adult", appetite: "hearty" },
-      { id: "c1", type: "child", appetite: "standard" },
+      { id: "c1", type: "toddler", appetite: "standard" },
     ],
     proteins,
     vegetablesLiked: [

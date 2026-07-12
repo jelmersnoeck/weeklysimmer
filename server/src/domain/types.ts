@@ -45,7 +45,7 @@ export interface Meal {
 
 export type Frequency = "never" | "occasionally" | "weekly" | "often";
 export type Appetite = "light" | "standard" | "hearty" | "very_active";
-export type MemberType = "adult" | "child";
+export type MemberType = "adult" | "child" | "toddler" | "baby";
 export type Diet =
   | "none"
   | "vegetarian"

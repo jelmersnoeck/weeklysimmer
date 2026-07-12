@@ -38,7 +38,7 @@ describe("preference option lists", () => {
   it("exports the canonical enum lists", () => {
     expect(FREQUENCIES).toEqual(["never", "occasionally", "weekly", "often"]);
     expect(APPETITES).toEqual(["light", "standard", "hearty", "very_active"]);
-    expect(MEMBER_TYPES).toEqual(["adult", "child"]);
+    expect(MEMBER_TYPES).toEqual(["adult", "child", "toddler", "baby"]);
     expect(DIETS).toContain("low_fodmap");
     expect(DIETS).toContain("none");
     expect(CUISINES).toContain("mediterranean");
@@ -54,8 +54,12 @@ describe("APPETITE_FACTOR / memberFactor", () => {
   it("maps type+appetite to the right factor", () => {
     expect(APPETITE_FACTOR.adult.hearty).toBe(1.2);
     expect(APPETITE_FACTOR.child.standard).toBe(0.5);
+    expect(APPETITE_FACTOR.toddler.standard).toBe(0.35);
+    expect(APPETITE_FACTOR.baby.standard).toBe(0.15);
     expect(memberFactor({ id: "x", type: "adult", appetite: "very_active" })).toBe(1.4);
     expect(memberFactor({ id: "y", type: "child", appetite: "light" })).toBe(0.4);
+    expect(memberFactor({ id: "t", type: "toddler", appetite: "hearty" })).toBe(0.5);
+    expect(memberFactor({ id: "b", type: "baby", appetite: "light" })).toBe(0.1);
   });
 });
 
@@ -66,11 +70,11 @@ describe("defaultSettings", () => {
     expect(s.configured).toBe(false);
   });
 
-  it("has 2 hearty adults and 1 standard child", () => {
+  it("has 2 hearty adults and 1 standard toddler", () => {
     expect(s.household).toEqual([
       { id: "a1", type: "adult", appetite: "hearty" },
       { id: "a2", type: "adult", appetite: "hearty" },
-      { id: "c1", type: "child", appetite: "standard" },
+      { id: "c1", type: "toddler", appetite: "standard" },
     ]);
   });
 

@@ -23,6 +23,8 @@ const options: Options = {
   appetiteFactor: {
     adult: { light: 0.9, standard: 1, hearty: 1.2, very_active: 1.4 },
     child: { light: 0.4, standard: 0.5, hearty: 0.7, very_active: 0.9 },
+    toddler: { light: 0.25, standard: 0.35, hearty: 0.5, very_active: 0.6 },
+    baby: { light: 0.1, standard: 0.15, hearty: 0.2, very_active: 0.25 },
   },
 };
 
