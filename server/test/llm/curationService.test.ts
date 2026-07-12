@@ -51,6 +51,9 @@ function fakeCurator(plan: RawPlan): { curator: PlanCurator; calls: CuratorInput
       calls.push(input);
       return plan;
     },
+    async regenerateMeal() {
+      throw new Error("not used in generatePlan tests");
+    },
   };
   return { curator, calls };
 }

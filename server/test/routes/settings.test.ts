@@ -9,6 +9,9 @@ const fakeCurator: PlanCurator = {
   async curate() {
     throw new Error("not used");
   },
+  async regenerateMeal() {
+    throw new Error("not used");
+  },
 };
 
 describe("GET /api/settings", () => {

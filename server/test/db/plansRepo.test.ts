@@ -5,6 +5,7 @@ import {
   getPlan,
   listPlans,
   rateMeal,
+  updateMeal,
   saveShoppingItems,
   getShoppingItems,
 } from "../../src/db/plansRepo.js";
@@ -127,6 +128,54 @@ describe("plansRepo", () => {
     rateMeal(db, mealId, 4);
     const updated = getPlan(db, id)!;
     expect(updated.meals.find((m) => m.id === mealId)!.rating).toBe(4);
+    db.close();
+  });
+
+  it("updates a meal's content in place and resets its rating", () => {
+    const db = openDb(":memory:");
+    const id = savePlan(db, samplePlan());
+    const plan = getPlan(db, id)!;
+    const target = plan.meals.find((m) => m.slot === "dinner")!;
+    const mealId = target.id!;
+
+    // give it a rating first, to prove update resets it
+    rateMeal(db, mealId, 5);
+
+    const replacement: Meal = {
+      day: 99, // ignored: day/slot/plan_id are preserved
+      slot: "breakfast",
+      title: "Turkey Stir Fry",
+      cuisine: "thai",
+      proteinClass: "lean",
+      base: "noodles",
+      difficulty: "medium",
+      ingredients: [
+        { name: "turkey", quantity: 200, unit: "g", category: "meat" },
+        { name: "noodles", quantity: 120, unit: "g", category: "pantry" },
+      ],
+      steps: ["Fry turkey", "Add noodles"],
+      sourceUrl: "https://example.com/turkey",
+      leftoverOf: null,
+      rating: 3, // ignored: update always resets rating to null
+    };
+    updateMeal(db, mealId, replacement);
+
+    const updated = getPlan(db, id)!;
+    const back = updated.meals.find((m) => m.id === mealId)!;
+    // content overwritten
+    expect(back.title).toBe("Turkey Stir Fry");
+    expect(back.cuisine).toBe("thai");
+    expect(back.proteinClass).toBe("lean");
+    expect(back.base).toBe("noodles");
+    expect(back.difficulty).toBe("medium");
+    expect(back.ingredients).toEqual(replacement.ingredients);
+    expect(back.steps).toEqual(["Fry turkey", "Add noodles"]);
+    expect(back.sourceUrl).toBe("https://example.com/turkey");
+    // rating reset
+    expect(back.rating).toBeNull();
+    // plan slot/day preserved (still the day-0 dinner)
+    expect(back.day).toBe(0);
+    expect(back.slot).toBe("dinner");
     db.close();
   });
 

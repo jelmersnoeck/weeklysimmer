@@ -153,6 +153,35 @@ export function rateMeal(
   db.prepare("UPDATE meals SET rating = ? WHERE id = ?").run(rating, mealId);
 }
 
+/**
+ * Overwrite the CONTENT columns of a single meal in place, keeping its identity
+ * (id, plan_id, day, slot). Resets the rating to null since the meal changed.
+ * Used by the regenerate flow to swap one meal without disturbing the rest of the plan.
+ */
+export function updateMeal(
+  db: Database.Database,
+  mealId: number,
+  meal: Meal
+): void {
+  db.prepare(
+    `UPDATE meals SET
+       title = ?, cuisine = ?, protein_class = ?, base = ?, difficulty = ?,
+       ingredients = ?, steps = ?, source_url = ?, leftover_of = ?, rating = NULL
+     WHERE id = ?`
+  ).run(
+    meal.title,
+    meal.cuisine,
+    meal.proteinClass,
+    meal.base,
+    meal.difficulty,
+    JSON.stringify(meal.ingredients),
+    JSON.stringify(meal.steps),
+    meal.sourceUrl ?? null,
+    meal.leftoverOf ? JSON.stringify(meal.leftoverOf) : null,
+    mealId
+  );
+}
+
 export function saveShoppingItems(
   db: Database.Database,
   planId: number,

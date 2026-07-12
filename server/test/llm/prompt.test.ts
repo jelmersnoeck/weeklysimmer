@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildCurationPrompt } from "../../src/llm/prompt.js";
-import type { Settings } from "../../src/domain/types.js";
+import { buildCurationPrompt, buildRegeneratePrompt } from "../../src/llm/prompt.js";
+import type { Settings, Meal } from "../../src/domain/types.js";
 
 const settings: Settings = {
   members: [
@@ -116,5 +116,76 @@ describe("buildCurationPrompt", () => {
   it("is a non-trivial pure string", () => {
     expect(typeof prompt).toBe("string");
     expect(prompt.length).toBeGreaterThan(200);
+  });
+});
+
+describe("buildRegeneratePrompt", () => {
+  const otherMeals: Meal[] = [
+    {
+      day: 2,
+      slot: "dinner",
+      title: "Lemon Chicken with Rice",
+      cuisine: "mediterranean",
+      proteinClass: "lean",
+      base: "rice",
+      difficulty: "easy",
+      ingredients: [{ name: "chicken", quantity: 150, unit: "g", category: "meat" }],
+      steps: ["Cook"],
+    },
+    {
+      day: 3,
+      slot: "dinner",
+      title: "Tuna Pasta Bake",
+      cuisine: "italian",
+      proteinClass: "lean",
+      base: "pasta",
+      difficulty: "easy",
+      ingredients: [{ name: "tuna", quantity: 100, unit: "g", category: "fish" }],
+      steps: ["Bake"],
+    },
+  ];
+
+  const regenInput = {
+    settings,
+    day: 2,
+    slot: "dinner" as const,
+    vegBox: ["carrots", "leek"],
+    note: "lighter please",
+    otherMeals,
+  };
+
+  const prompt = buildRegeneratePrompt(regenInput);
+
+  it("names the target day and slot", () => {
+    expect(prompt.toLowerCase()).toContain("dinner");
+    // day 2 referenced explicitly
+    expect(prompt).toContain("2");
+  });
+
+  it("states the standing constraints (no spicy, low-fodmap, lean protein, easy ~30 min)", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toContain("no_spicy");
+    expect(lower).toContain("low_fodmap");
+    expect(lower).toContain("lean");
+    expect(lower).toContain("30");
+    expect(lower).toContain("easy");
+  });
+
+  it("asks for a meal different from / with variety versus the other meals", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toMatch(/different|variety|vary/);
+    // references the existing meals it must differ from
+    expect(prompt).toContain("Lemon Chicken with Rice");
+    expect(prompt).toContain("Tuna Pasta Bake");
+  });
+
+  it("includes the veg box and note", () => {
+    expect(prompt).toContain("carrots");
+    expect(prompt).toContain(regenInput.note);
+  });
+
+  it("is a non-trivial pure string", () => {
+    expect(typeof prompt).toBe("string");
+    expect(prompt.length).toBeGreaterThan(150);
   });
 });

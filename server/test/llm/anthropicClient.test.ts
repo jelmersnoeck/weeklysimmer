@@ -103,3 +103,35 @@ describe("createAnthropicCurator", () => {
     await expect(curator.curate(input)).rejects.toThrow();
   });
 });
+
+const regenInput = {
+  settings,
+  day: 2,
+  slot: "dinner" as const,
+  vegBox: ["carrots"],
+  note: "lighter",
+  otherMeals: [],
+};
+
+describe("createAnthropicCurator.regenerateMeal", () => {
+  it("returns a single typed meal and calls the client correctly", async () => {
+    const { client, calls } = fakeClient(validPlan.meals[0]);
+    const curator = createAnthropicCurator(client);
+
+    const meal = await curator.regenerateMeal(regenInput);
+
+    expect(meal).toEqual(validPlan.meals[0]);
+    expect(calls).toHaveLength(1);
+    const params = calls[0];
+    expect(params.model).toBe("claude-opus-4-8");
+    expect(params.output_config).toBeTruthy();
+    const messages = params.messages as Array<{ role: string; content: string }>;
+    expect(messages[0].content.toLowerCase()).toContain("dinner");
+  });
+
+  it("throws when the returned meal is invalid", async () => {
+    const { client } = fakeClient({ ...validPlan.meals[0], proteinClass: "nope" });
+    const curator = createAnthropicCurator(client);
+    await expect(curator.regenerateMeal(regenInput)).rejects.toThrow();
+  });
+});

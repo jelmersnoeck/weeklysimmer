@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import type { Settings } from "../domain/types.js";
-import { buildCurationPrompt } from "./prompt.js";
-import { planSchema, type RawPlan } from "./planSchema.js";
+import type { Settings, Meal, Slot } from "../domain/types.js";
+import { buildCurationPrompt, buildRegeneratePrompt } from "./prompt.js";
+import { planSchema, rawMealSchema, type RawPlan, type RawMeal } from "./planSchema.js";
 
 export interface CuratorInput {
   settings: Settings;
@@ -12,9 +12,20 @@ export interface CuratorInput {
   avoid: string[];
 }
 
+export interface RegenerateMealInput {
+  settings: Settings;
+  day: number;
+  slot: Slot;
+  vegBox: string[];
+  note: string;
+  otherMeals: Meal[];
+}
+
 /** Port: the app depends on this, not on the SDK directly. */
 export interface PlanCurator {
   curate(input: CuratorInput): Promise<RawPlan>;
+  /** Produce a single replacement meal for one slot in an existing plan. */
+  regenerateMeal(input: RegenerateMealInput): Promise<RawMeal>;
 }
 
 /**
@@ -63,6 +74,32 @@ export function createAnthropicCurator(client: MinimalAnthropicClient): PlanCura
       const result = planSchema.safeParse(parsed);
       if (!result.success) {
         throw new Error(`LLM curation returned an invalid plan: ${result.error.message}`);
+      }
+      return result.data;
+    },
+
+    async regenerateMeal(input: RegenerateMealInput): Promise<RawMeal> {
+      const prompt = buildRegeneratePrompt(input);
+
+      const response = await client.messages.parse({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        thinking: { type: "adaptive" },
+        tools: [{ type: "web_search_20260209", name: "web_search" }],
+        output_config: { format: zodOutputFormat(rawMealSchema) },
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const parsed = response.parsed_output;
+      if (parsed == null) {
+        throw new Error(
+          "LLM regeneration returned no structured output (parsed_output was empty)"
+        );
+      }
+
+      const result = rawMealSchema.safeParse(parsed);
+      if (!result.success) {
+        throw new Error(`LLM regeneration returned an invalid meal: ${result.error.message}`);
       }
       return result.data;
     },

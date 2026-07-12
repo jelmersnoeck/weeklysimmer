@@ -1,4 +1,14 @@
-import type { Settings } from "../domain/types.js";
+import type { Settings, Meal, Slot } from "../domain/types.js";
+
+const DAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 export interface CurationPromptInput {
   settings: Settings;
@@ -79,4 +89,73 @@ Do not repeat any meal listed above.
   grains, pantry, ...).
 
 Return the plan as structured data matching the required schema.`;
+}
+
+export interface RegeneratePromptInput {
+  settings: Settings;
+  day: number;
+  slot: Slot;
+  vegBox: string[];
+  note: string;
+  otherMeals: Meal[];
+}
+
+/**
+ * Build the (pure, no-network) prompt to regenerate ONE meal in an existing week.
+ *
+ * The same standing household constraints apply (no spicy, low-FODMAP, lean-protein
+ * cadence, easy ~30-minute dinners), but the model returns a SINGLE replacement meal
+ * that must be meaningfully different from the other meals already in the plan.
+ */
+export function buildRegeneratePrompt(input: RegeneratePromptInput): string {
+  const { settings, day, slot, vegBox, note, otherMeals } = input;
+
+  const dayName = DAY_NAMES[day] ?? `day ${day}`;
+  const vegList = vegBox.length > 0 ? vegBox.join(", ") : "(none this week)";
+  const restrictions =
+    settings.restrictions.length > 0 ? settings.restrictions.join(", ") : "(none)";
+  const avoidIngredients =
+    settings.avoidIngredients.length > 0
+      ? settings.avoidIngredients.join(", ")
+      : "(none)";
+  const otherTitles =
+    otherMeals.length > 0
+      ? otherMeals.map((m) => `- ${m.title}`).join("\n")
+      : "- (none)";
+
+  return `You are a meal-prep planner for a family household. Replace ONE meal in an
+existing weekly plan and return it as a single structured meal.
+
+## Target slot
+Regenerate the meal for ${dayName} (day ${day}), slot: ${slot}.
+User note for this week: ${note}
+
+## Veg box — prefer using it up
+This week's veg box contains: ${vegList}. Prefer a recipe that helps use up these
+vegetables so nothing goes to waste.
+
+## Hard restrictions (STRICT — always EXCLUDE)
+Dietary restrictions to strictly exclude: ${restrictions}.
+- no_spicy: no chilli, hot peppers, or spicy heat.
+- low_fodmap: keep the meal low-FODMAP.
+Ingredients to EXCLUDE entirely (never use these): ${avoidIngredients}.
+
+## Protein & effort
+- Favour lean, high-protein choices (chicken, tuna, fish, turkey, eggs) unless this
+  slot is meant to be vegetarian or a red/high-fat-meat meal.
+- Keep it easy: an ~30-minute weeknight dinner with short, simple steps.
+
+## Variety — be DIFFERENT
+The plan already contains these meals; the replacement MUST be different from them,
+using a different main dish for variety (different protein, cuisine, or base):
+${otherTitles}
+
+## Output requirements
+- Return exactly ONE meal for day ${day}, slot ${slot}, matching the required schema.
+- Use the web search tool to find a REAL recipe, returning a "sourceUrl" where possible.
+- Ingredient quantities are PER SINGLE SERVING (the app scales them for the household).
+  Use sensible units (g, ml, piece, clove, tbsp) and a shopping "category" per ingredient
+  (produce, meat, fish, dairy, grains, pantry, ...).
+
+Return the single meal as structured data matching the required schema.`;
 }

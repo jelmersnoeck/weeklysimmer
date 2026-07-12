@@ -2,6 +2,7 @@ import express from "express";
 import type Database from "better-sqlite3";
 import type { PlanCurator } from "./llm/anthropicClient.js";
 import { settingsRouter } from "./routes/settings.js";
+import { plansRouter } from "./routes/plans.js";
 
 export interface AppDeps {
   curator: PlanCurator;
@@ -19,6 +20,7 @@ export function createApp(db: Database.Database, deps: AppDeps): express.Express
   app.use(express.json());
 
   app.use("/api", settingsRouter(db));
+  app.use("/api", plansRouter(db, deps));
 
   // Final error handler. Express v5 forwards rejected async handlers here.
   app.use(
