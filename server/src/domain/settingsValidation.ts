@@ -6,12 +6,19 @@ import type {
   Frequency,
   HouseholdMember,
   MealSchedule,
+  MeasurementSystem,
   MemberType,
   ProteinPref,
   Settings,
   Slot,
 } from "./types.js";
-import { APPETITES, DIETS, FREQUENCIES, MEMBER_TYPES } from "./preferences.js";
+import {
+  APPETITES,
+  DIETS,
+  FREQUENCIES,
+  MEASUREMENT_SYSTEMS,
+  MEMBER_TYPES,
+} from "./preferences.js";
 import { SLOTS } from "./schedule.js";
 
 export type ValidationResult =
@@ -125,6 +132,16 @@ export function validateSettings(body: unknown): ValidationResult {
   ) {
     return { ok: false, error: "diets must be an array of valid diets" };
   }
+  if (
+    !Array.isArray(b.units) ||
+    b.units.length === 0 ||
+    !b.units.every((u) => MEASUREMENT_SYSTEMS.includes(u as MeasurementSystem))
+  ) {
+    return {
+      ok: false,
+      error: "units must be a non-empty array of valid measurement systems",
+    };
+  }
   if (!EFFORTS.includes(b.effort as Difficulty)) {
     return { ok: false, error: "effort must be easy, medium or hard" };
   }
@@ -150,6 +167,7 @@ export function validateSettings(body: unknown): ValidationResult {
       flavoursLiked: b.flavoursLiked as string[],
       avoid: b.avoid as string[],
       diets: b.diets as Diet[],
+      units: b.units as MeasurementSystem[],
       effort: b.effort as Difficulty,
       mealSchedule,
     },

@@ -15,6 +15,9 @@ export const ingredientSchema = z.object({
   quantity: z.number().nonnegative(),
   unit: z.string().min(1),
   category: z.string().min(1),
+  // Optional cup/spoon measure (metric quantity+unit stays the canonical measure).
+  cupQuantity: z.number().nonnegative().optional(),
+  cupUnit: z.string().optional(),
 });
 
 export const rawMealSchema = z.object({

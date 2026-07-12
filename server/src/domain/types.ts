@@ -21,6 +21,8 @@ export interface Ingredient {
   quantity: number;   // per single recipe serving (normalized)
   unit: string;       // "g" | "ml" | "clove" | "piece" | "tbsp" | ...
   category: string;   // shopping aisle: "produce" | "meat" | "dairy" | ...
+  cupQuantity?: number; // optional per-serving cup/spoon amount (metric stays canonical)
+  cupUnit?: string;     // "cup" | "tbsp" | "tsp"
 }
 
 export interface Meal {
@@ -47,6 +49,8 @@ export type Frequency = "never" | "occasionally" | "weekly" | "often";
 export type Appetite = "light" | "standard" | "hearty" | "very_active";
 export type MemberType = "adult" | "child" | "toddler" | "baby";
 export type Diet = "vegetarian" | "vegan" | "pescatarian" | "low_fodmap";
+/** How the household prefers to see quantities. Metric is always the canonical measure. */
+export type MeasurementSystem = "metric" | "cups";
 
 /** One person in the household. Appetite + type drive the portion factor. */
 export interface HouseholdMember {
@@ -78,6 +82,7 @@ export interface Settings {
   flavoursLiked: string[];
   avoid: string[];
   diets: Diet[];
+  units: MeasurementSystem[]; // at least one; "metric" is always the canonical measure
   effort: Difficulty;
   mealSchedule: MealSchedule;
 }
@@ -97,4 +102,6 @@ export interface ShoppingItem {
   unit: string;
   category: string;
   checked: boolean;
+  cupQuantity?: number; // summed cup/spoon amount across the merged entries (when present)
+  cupUnit?: string;     // "cup" | "tbsp" | "tsp"
 }

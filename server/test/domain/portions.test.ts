@@ -47,4 +47,23 @@ describe("scaleIngredient", () => {
     scaleIngredient(egg, 3);
     expect(egg.quantity).toBe(1);
   });
+
+  it("scales cupQuantity (per-serving) too and carries cupUnit through", () => {
+    const flour: Ingredient = {
+      name: "flour",
+      quantity: 40,
+      unit: "g",
+      category: "pantry",
+      cupQuantity: 0.25,
+      cupUnit: "cup",
+    };
+    expect(scaleIngredient(flour, 3)).toEqual({
+      name: "flour",
+      quantity: 120,
+      unit: "g",
+      category: "pantry",
+      cupQuantity: 0.75,
+      cupUnit: "cup",
+    });
+  });
 });

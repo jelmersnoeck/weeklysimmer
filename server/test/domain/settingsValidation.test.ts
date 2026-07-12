@@ -32,4 +32,20 @@ describe("validateSettings", () => {
     const result = validateSettings(makeSettings({ household: [] }));
     expect(result.ok).toBe(false);
   });
+
+  it("accepts a multi-value units array", () => {
+    const result = validateSettings(makeSettings({ units: ["metric", "cups"] }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.settings.units).toEqual(["metric", "cups"]);
+  });
+
+  it("rejects an empty units array", () => {
+    const result = validateSettings(makeSettings({ units: [] }));
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects an invalid measurement system", () => {
+    const result = validateSettings(makeSettings({ units: ["imperial"] as never }));
+    expect(result.ok).toBe(false);
+  });
 });

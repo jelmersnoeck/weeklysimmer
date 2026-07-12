@@ -110,6 +110,8 @@ export const DIETS = [
   "low_fodmap",
 ] as const;
 
+export const MEASUREMENT_SYSTEMS = ["metric", "cups"] as const;
+
 export const VEGETABLES = [
   "carrot",
   "broccoli",
@@ -205,6 +207,7 @@ export function defaultSettings(): Settings {
     flavoursLiked: ["savoury", "herby", "umami", "creamy"],
     avoid: ["spicy"],
     diets: ["low_fodmap"],
+    units: ["metric"],
     effort: "easy",
     mealSchedule: defaultMealSchedule(),
   };

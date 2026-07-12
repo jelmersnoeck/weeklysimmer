@@ -71,6 +71,24 @@ function dietGuidance(settings: Settings): string {
   return `Follow these dietary frameworks: ${settings.diets.join(", ")} (explicit protein/taste selections still take precedence).`;
 }
 
+/**
+ * Tell the model how the household reads quantities. Metric (g/ml) is ALWAYS the
+ * canonical measure the app does its shopping math on; when the household also uses
+ * cups, ask for an additional cup/spoon measure per ingredient where it makes sense.
+ */
+function measurementGuidance(settings: Settings): string {
+  const lines = [
+    `The household reads quantities in: ${settings.units.join(", ")}.`,
+    `ALWAYS return a metric "quantity" + "unit" (grams or millilitres) as the canonical measure — the app does all shopping arithmetic in metric.`,
+  ];
+  if (settings.units.includes("cups")) {
+    lines.push(
+      `This household ALSO uses cups: for every ingredient where a cup/tablespoon/teaspoon measure makes sense, ALSO return "cupQuantity" (a number, per single serving) and "cupUnit" (one of "cup", "tbsp", "tsp"). Skip the cup measure for pure-count items like eggs.`,
+    );
+  }
+  return lines.join(" ");
+}
+
 /** Describe the household's protein preferences weighted by frequency. */
 function proteinProfile(settings: Settings): string {
   const byFreq = (f: string): string[] =>
@@ -142,6 +160,9 @@ Lean toward these preferences, but keep the week varied.
 Never use anything the household avoids: ${orNone(settings.avoid)}.
 Treat these as strict allergen/dislike excludes — no meal may contain them.
 ${dietSection}
+## Measurements
+${measurementGuidance(settings)}
+
 ## Household portions & effort
 Cook for ${servings} servings per meal (the app scales ingredient quantities; still,
 plan realistic family-sized meals). Keep effort "${settings.effort}".
@@ -256,6 +277,7 @@ ${otherTitles}
 - Ingredient quantities are PER SINGLE SERVING (the app scales them for the household).
   Use sensible units (g, ml, piece, clove, tbsp) and a shopping "category" per ingredient
   (produce, meat, fish, dairy, grains, pantry, ...).
+- ${measurementGuidance(settings)}
 
 Return the single meal as structured data matching the required schema.`;
 }

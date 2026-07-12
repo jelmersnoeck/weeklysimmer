@@ -162,6 +162,24 @@ describe("buildCurationPrompt", () => {
     expect(lower).toContain("pantry");
   });
 
+  it("states the measurement preference and always asks for canonical metric", () => {
+    // default profile uses metric only
+    expect(prompt.toLowerCase()).toContain("metric");
+    expect(prompt.toLowerCase()).toContain("canonical");
+    // no cups requested when not selected
+    expect(prompt).not.toContain("cupQuantity");
+  });
+
+  it("asks for cup measures ONLY when the household uses cups", () => {
+    const cupsPrompt = buildCurationPrompt({
+      ...input,
+      settings: makeSettings({ units: ["metric", "cups"] }),
+    });
+    expect(cupsPrompt).toContain("cupQuantity");
+    expect(cupsPrompt).toContain("cupUnit");
+    expect(cupsPrompt.toLowerCase()).toContain("cups");
+  });
+
   it("includes the week start and note", () => {
     expect(prompt).toContain(input.weekStart);
     expect(prompt).toContain(input.note);

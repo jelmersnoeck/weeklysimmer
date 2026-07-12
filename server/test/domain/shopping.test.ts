@@ -121,6 +121,27 @@ describe("buildShoppingList", () => {
     expect(list.every((i) => i.category === "bulk_staples")).toBe(true);
   });
 
+  it("sums cupQuantity across the same ingredient sharing a cup unit", () => {
+    const meals = [
+      meal([{ name: "flour", quantity: 120, unit: "g", category: "pantry", cupQuantity: 1, cupUnit: "cup" }]),
+      meal([{ name: "flour", quantity: 60, unit: "g", category: "pantry", cupQuantity: 0.5, cupUnit: "cup" }]),
+    ];
+    const list = buildShoppingList(meals);
+    expect(list).toHaveLength(1);
+    expect(list[0].totalQuantity).toBe(180);
+    expect(list[0].cupQuantity).toBe(1.5);
+    expect(list[0].cupUnit).toBe("cup");
+  });
+
+  it("omits cup fields entirely when no ingredient carries them", () => {
+    const meals = [
+      meal([{ name: "rice", quantity: 100, unit: "g", category: "grains" }]),
+    ];
+    const item = buildShoppingList(meals)[0];
+    expect(item.cupQuantity).toBeUndefined();
+    expect(item.cupUnit).toBeUndefined();
+  });
+
   it("groups and sorts by category, then name", () => {
     const meals = [
       meal([

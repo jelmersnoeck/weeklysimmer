@@ -80,6 +80,34 @@ describe("planSchema", () => {
     ).toBe(0);
   });
 
+  it("accepts an ingredient with optional cupQuantity/cupUnit", () => {
+    const withCups = {
+      ...validMeal,
+      ingredients: [
+        { name: "flour", quantity: 120, unit: "g", category: "grains", cupQuantity: 1, cupUnit: "cup" },
+      ],
+    };
+    const parsed = rawMealSchema.parse(withCups);
+    expect(parsed.ingredients[0].cupQuantity).toBe(1);
+    expect(parsed.ingredients[0].cupUnit).toBe("cup");
+  });
+
+  it("accepts an ingredient WITHOUT cup fields (they stay optional)", () => {
+    const parsed = rawMealSchema.parse(validMeal);
+    expect(parsed.ingredients[0].cupQuantity).toBeUndefined();
+    expect(parsed.ingredients[0].cupUnit).toBeUndefined();
+  });
+
+  it("rejects a negative cupQuantity", () => {
+    const bad = {
+      ...validMeal,
+      ingredients: [
+        { name: "flour", quantity: 120, unit: "g", category: "grains", cupQuantity: -1, cupUnit: "cup" },
+      ],
+    };
+    expect(() => rawMealSchema.parse(bad)).toThrow();
+  });
+
   it("rejects a negative ingredient quantity", () => {
     const bad = {
       ...validMeal,

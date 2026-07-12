@@ -53,6 +53,7 @@ describe("GET /api/options", () => {
     expect(res.body.flavours).toContain("umami");
     expect(res.body.avoids).toContain("spicy");
     expect(res.body.diets).toContain("low_fodmap");
+    expect(res.body.measurementSystems).toEqual(["metric", "cups"]);
     expect(res.body.vegetables).toContain("courgette");
     expect(res.body.fruits).toContain("berries");
     expect(res.body.frequencies).toEqual(["never", "occasionally", "weekly", "often"]);

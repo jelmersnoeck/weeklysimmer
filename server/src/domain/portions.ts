@@ -25,7 +25,15 @@ export function householdServings(members: HouseholdMember[]): number {
  *
  * Ingredient quantities from the LLM are normalized to ONE serving; multiply by
  * the household serving count so the shopping list reflects what to actually buy.
+ * The optional cup measure (cupQuantity) is per-serving too, so it scales the same
+ * way; cupUnit is carried through unchanged.
  */
 export function scaleIngredient(ing: Ingredient, servings: number): Ingredient {
-  return { ...ing, quantity: ing.quantity * servings };
+  return {
+    ...ing,
+    quantity: ing.quantity * servings,
+    ...(ing.cupQuantity !== undefined
+      ? { cupQuantity: ing.cupQuantity * servings }
+      : {}),
+  };
 }

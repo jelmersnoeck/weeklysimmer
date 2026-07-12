@@ -27,7 +27,14 @@ import { canonicalCategory } from "./categories.js";
 export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
   const groups = new Map<
     string,
-    { name: string; category: string; unit: string; total: number }
+    {
+      name: string;
+      category: string;
+      unit: string;
+      total: number;
+      cupUnit?: string;
+      cupTotal?: number;
+    }
   >();
 
   for (const m of meals) {
@@ -54,15 +61,27 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
         amount = ing.quantity;
       }
 
+      const hasCup = ing.cupQuantity !== undefined && ing.cupUnit !== undefined;
+
       const existing = groups.get(key);
       if (existing) {
         existing.total += amount;
+        // Same ingredient → cups are additive as long as they use the same cup unit.
+        if (hasCup) {
+          if (existing.cupUnit === undefined) {
+            existing.cupUnit = ing.cupUnit;
+            existing.cupTotal = ing.cupQuantity;
+          } else if (existing.cupUnit === ing.cupUnit) {
+            existing.cupTotal = (existing.cupTotal ?? 0) + ing.cupQuantity!;
+          }
+        }
       } else {
         groups.set(key, {
           name: ing.name,
           category: canonicalCategory(ing.name, ing.category),
           unit,
           total: amount,
+          ...(hasCup ? { cupUnit: ing.cupUnit, cupTotal: ing.cupQuantity } : {}),
         });
       }
     }
@@ -75,6 +94,9 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
       unit: g.unit,
       category: g.category,
       checked: false,
+      ...(g.cupTotal !== undefined && g.cupUnit !== undefined
+        ? { cupQuantity: g.cupTotal, cupUnit: g.cupUnit }
+        : {}),
     }))
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 }
