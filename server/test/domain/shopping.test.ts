@@ -64,6 +64,20 @@ describe("buildShoppingList", () => {
     expect(buildShoppingList(meals)[0].totalQuantity).toBe(150);
   });
 
+  it("excludes leftover meals (their food was already bought for the source meal)", () => {
+    const meals = [
+      meal([{ name: "chicken", quantity: 450, unit: "g", category: "meat" }]),
+      meal(
+        [{ name: "cooked chicken", quantity: 300, unit: "g", category: "meat" }],
+        { day: 1, slot: "lunch", leftoverOf: { day: 0, slot: "dinner" } },
+      ),
+    ];
+    // Only the source dinner's chicken is on the list; the leftover lunch adds nothing.
+    expect(buildShoppingList(meals)).toEqual([
+      { name: "chicken", totalQuantity: 450, unit: "g", category: "meat", checked: false },
+    ]);
+  });
+
   it("groups and sorts by category, then name", () => {
     const meals = [
       meal([

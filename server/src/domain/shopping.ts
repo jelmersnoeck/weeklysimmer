@@ -30,6 +30,9 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
   >();
 
   for (const m of meals) {
+    // Leftover meals reuse food already bought for their source meal, so they must
+    // not add to the shopping list — otherwise the reused protein/veg is bought twice.
+    if (m.leftoverOf) continue;
     for (const ing of m.ingredients) {
       const nameLower = ing.name.trim().toLowerCase();
       const converted = toBaseUnit(ing.quantity, ing.unit);

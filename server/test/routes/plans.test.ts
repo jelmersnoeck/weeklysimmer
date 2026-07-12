@@ -102,11 +102,11 @@ describe("POST /api/plans/generate", () => {
     );
     expect(chicken.quantity).toBe(450); // 150 * 3
 
-    // shopping aggregated across meals: chicken (150 + 100) * 3 = 750
+    // shopping excludes the leftover lunch: only the dinner's chicken 150 * 3 = 450
     const shopChicken = res.body.shopping.find(
       (s: { name: string }) => s.name.toLowerCase() === "chicken breast",
     );
-    expect(shopChicken.totalQuantity).toBe(750);
+    expect(shopChicken.totalQuantity).toBe(450);
 
     // unused veg present: spinach used by no meal, carrots is used
     expect(res.body.unusedVeg).toContain("spinach");
@@ -263,11 +263,12 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
       (s: { name: string }) => s.name.toLowerCase() === "turkey mince",
     );
     expect(shopTurkey.totalQuantity).toBe(480);
-    // chicken only remains from the lunch meal now: 100 * 3 = 300
+    // the only other meal is a leftover lunch (excluded from shopping), so the old
+    // chicken is gone entirely from the buy list.
     const shopChicken = res.body.shopping.find(
       (s: { name: string }) => s.name.toLowerCase() === "chicken breast",
     );
-    expect(shopChicken.totalQuantity).toBe(300);
+    expect(shopChicken).toBeUndefined();
     db.close();
   });
 
