@@ -83,8 +83,7 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
         meal.proteinClass,
         meal.base,
         meal.difficulty,
-        // servings: not part of the domain Meal type in this phase; default 1
-        1,
+        meal.servings ?? 1,
         JSON.stringify(meal.ingredients),
         JSON.stringify(meal.steps),
         meal.sourceUrl ?? null,
@@ -166,7 +165,7 @@ export function updateMeal(
   db.prepare(
     `UPDATE meals SET
        title = ?, cuisine = ?, protein_class = ?, base = ?, difficulty = ?,
-       ingredients = ?, steps = ?, source_url = ?, leftover_of = ?, rating = NULL
+       servings = ?, ingredients = ?, steps = ?, source_url = ?, leftover_of = ?, rating = NULL
      WHERE id = ?`
   ).run(
     meal.title,
@@ -174,6 +173,7 @@ export function updateMeal(
     meal.proteinClass,
     meal.base,
     meal.difficulty,
+    meal.servings ?? 1,
     JSON.stringify(meal.ingredients),
     JSON.stringify(meal.steps),
     meal.sourceUrl ?? null,
@@ -240,6 +240,7 @@ function rowToMeal(row: MealRow): Meal {
     proteinClass: row.protein_class,
     base: row.base,
     difficulty: row.difficulty,
+    servings: row.servings,
     ingredients: JSON.parse(row.ingredients),
     steps: JSON.parse(row.steps),
     sourceUrl: row.source_url ?? undefined,

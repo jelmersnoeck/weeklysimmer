@@ -56,6 +56,7 @@ export async function generatePlan(
     proteinClass: m.proteinClass,
     base: m.base,
     difficulty: m.difficulty,
+    servings,
     ingredients: m.ingredients.map((i) => scaleIngredient(i, servings)),
     steps: m.steps,
     sourceUrl: m.sourceUrl,

@@ -18,6 +18,7 @@ export interface Meal {
   proteinClass: ProteinClass;
   base: string;       // "rice" | "pasta" | "potato" | "none" | ...
   difficulty: Difficulty;
+  servings?: number;  // whole servings the meal's ingredients are scaled to
   ingredients: Ingredient[];
   steps: string[];
   sourceUrl?: string;

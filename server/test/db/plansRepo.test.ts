@@ -97,6 +97,27 @@ describe("plansRepo", () => {
     db.close();
   });
 
+  it("round-trips a meal's servings", () => {
+    const db = openDb(":memory:");
+    const dinner: Meal = {
+      day: 0,
+      slot: "dinner",
+      title: "Chicken Rice",
+      cuisine: "asian",
+      proteinClass: "lean",
+      base: "rice",
+      difficulty: "easy",
+      servings: 3,
+      ingredients: [{ name: "chicken", quantity: 450, unit: "g", category: "meat" }],
+      steps: ["Cook"],
+      leftoverOf: null,
+    };
+    const id = savePlan(db, samplePlan({ meals: [dinner] }));
+    const back = getPlan(db, id)!.meals[0];
+    expect(back.servings).toBe(3);
+    db.close();
+  });
+
   it("returns null for an unknown plan", () => {
     const db = openDb(":memory:");
     expect(getPlan(db, 999)).toBeNull();

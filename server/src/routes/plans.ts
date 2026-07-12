@@ -37,6 +37,7 @@ function scaleRawMeal(raw: RawMeal, servings: number): Meal {
     proteinClass: raw.proteinClass,
     base: raw.base,
     difficulty: raw.difficulty,
+    servings,
     ingredients: raw.ingredients.map((i) => scaleIngredient(i, servings)),
     steps: raw.steps,
     sourceUrl: raw.sourceUrl,
