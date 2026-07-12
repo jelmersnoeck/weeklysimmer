@@ -6,6 +6,28 @@ interface ShoppingListProps {
   items: ShoppingItem[];
 }
 
+// Friendly, human-readable names for known shopping categories.
+const CATEGORY_LABELS: Record<string, string> = {
+  produce: "Produce",
+  meat: "Meat",
+  dairy: "Dairy",
+  fish: "Fish",
+  bulk_staples: "Bulk staples",
+  pantry: "Pantry",
+  grains: "Grains",
+};
+
+// Title Case fallback for unknown categories: "baking_goods" → "Baking Goods".
+function prettyCategory(category: string): string {
+  const key = category.toLowerCase();
+  if (CATEGORY_LABELS[key]) return CATEGORY_LABELS[key];
+  return category
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function groupByCategory(items: ShoppingItem[]): [string, ShoppingItem[]][] {
   const groups = new Map<string, ShoppingItem[]>();
   for (const item of items) {
@@ -14,7 +36,12 @@ function groupByCategory(items: ShoppingItem[]): [string, ShoppingItem[]][] {
     if (bucket) bucket.push(item);
     else groups.set(category, [item]);
   }
-  return Array.from(groups.entries());
+  // Keep existing (insertion) order, but push Bulk staples to its own section last.
+  return Array.from(groups.entries()).sort(([a], [b]) => {
+    const aBulk = a.toLowerCase() === "bulk_staples";
+    const bBulk = b.toLowerCase() === "bulk_staples";
+    return aBulk === bBulk ? 0 : aBulk ? 1 : -1;
+  });
 }
 
 export function ShoppingList({ items }: ShoppingListProps) {
@@ -45,7 +72,9 @@ export function ShoppingList({ items }: ShoppingListProps) {
       <div className="shopping__aisles">
         {groups.map(([category, group]) => (
           <fieldset key={category} className="shopping__aisle">
-            <legend className="shopping__aisle-name">{category}</legend>
+            <legend className="shopping__aisle-name">
+              {prettyCategory(category)}
+            </legend>
             <ul className="shopping__items">
               {group.map((item) => {
                 const id = `shop-${category}-${item.name}`.replace(/\s+/g, "-");
