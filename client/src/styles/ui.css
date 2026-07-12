@@ -1,0 +1,68 @@
+/* Shared UI primitives used across components. */
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn--primary {
+  background: var(--herb);
+  color: var(--paper);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #35583f;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--herb);
+  border-color: var(--sage-line);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--sage);
+}
+
+.btn--small {
+  font-size: 0.85rem;
+  padding: var(--space-1) var(--space-3);
+}
+
+/* Small semantic tag used on meal cards. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--sage-line);
+  background: var(--sage);
+  color: var(--ink-60);
+}
+
+.tag--veg {
+  background: var(--herb-tint);
+  color: var(--herb);
+  border-color: transparent;
+}
+
+.tag--red {
+  background: var(--beet-tint);
+  color: var(--beet);
+  border-color: transparent;
+}

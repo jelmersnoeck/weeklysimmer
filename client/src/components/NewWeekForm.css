@@ -1,0 +1,78 @@
+.new-week {
+  display: grid;
+  gap: var(--space-6);
+  max-width: 560px;
+}
+
+.new-week__field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.new-week__field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.new-week input[type="date"],
+.new-week input[type="text"],
+.new-week textarea,
+.new-week select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.new-week textarea {
+  resize: vertical;
+}
+
+.new-week__chips {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.new-week__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--herb-tint);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.9rem;
+}
+
+.new-week__chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--ink-60);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.new-week__chip-remove:hover {
+  color: var(--beet);
+}
+
+.new-week__hint {
+  margin: 0;
+  color: var(--ink-60);
+  font-size: 0.9rem;
+}
+
+.new-week__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
