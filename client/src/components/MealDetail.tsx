@@ -90,6 +90,11 @@ export function MealDetail({
               <span className="mono">{totalMinutes}</span> min
             </p>
           )}
+          {meal.caloriesPerServing != null && (
+            <p className="meal-detail__time">
+              <span className="mono">{meal.caloriesPerServing}</span> kcal / serving
+            </p>
+          )}
         </div>
         <button
           type="button"

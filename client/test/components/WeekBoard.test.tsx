@@ -63,6 +63,19 @@ describe("MealCard", () => {
     render(<MealCard meal={makeMeal()} onSelect={vi.fn()} />);
     expect(screen.queryByText(/min/)).not.toBeInTheDocument();
   });
+
+  test("shows a calories badge when caloriesPerServing is set", () => {
+    render(
+      <MealCard meal={makeMeal({ caloriesPerServing: 320 })} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByText("320")).toBeInTheDocument();
+    expect(screen.getByText(/kcal/)).toBeInTheDocument();
+  });
+
+  test("shows no calories badge when caloriesPerServing is absent", () => {
+    render(<MealCard meal={makeMeal()} onSelect={vi.fn()} />);
+    expect(screen.queryByText(/kcal/)).not.toBeInTheDocument();
+  });
 });
 
 describe("WeekGrid", () => {
@@ -70,7 +83,7 @@ describe("WeekGrid", () => {
     const plan: WeeklyPlan = {
       id: 3,
       weekStart: "2026-07-13",
-      vegBox: ["leek"],
+      onHand: ["leek"],
       note: "",
       status: "active",
       meals: [makeMeal()],
@@ -85,7 +98,7 @@ describe("WeekGrid", () => {
     const plan: WeeklyPlan = {
       id: 3,
       weekStart: "2026-07-13",
-      vegBox: ["leek"],
+      onHand: ["leek"],
       note: "",
       status: "active",
       meals: [
@@ -110,6 +123,28 @@ describe("WeekGrid", () => {
     // The snack meals for Monday render in their cells.
     expect(screen.getByText("Apple")).toBeInTheDocument();
     expect(screen.getByText("Yoghurt")).toBeInTheDocument();
+  });
+
+  test("only renders slot rows that the plan actually uses", () => {
+    const plan: WeeklyPlan = {
+      id: 4,
+      weekStart: "2026-07-13",
+      onHand: ["leek"],
+      note: "",
+      status: "active",
+      meals: [
+        makeMeal({ id: 1, day: 0, slot: "breakfast", title: "Porridge" }),
+        makeMeal({ id: 2, day: 2, slot: "dinner", title: "Soup" }),
+      ],
+    };
+    render(<WeekGrid plan={plan} onSelectMeal={vi.fn()} />);
+    // Breakfast and Dinner are used, so their labels appear once per day (7).
+    expect(screen.getAllByText("Breakfast")).toHaveLength(7);
+    expect(screen.getAllByText("Dinner")).toHaveLength(7);
+    // Unused slots are hidden entirely — no empty rows.
+    expect(screen.queryByText("Morning snack")).not.toBeInTheDocument();
+    expect(screen.queryByText("Lunch")).not.toBeInTheDocument();
+    expect(screen.queryByText("Afternoon snack")).not.toBeInTheDocument();
   });
 });
 
@@ -151,7 +186,7 @@ describe("MealDetail", () => {
     const user = userEvent.setup();
     const regenSpy = vi
       .spyOn(api, "regenerateMeal")
-      .mockResolvedValue({ plan: {} as WeeklyPlan, shopping: [], unusedVeg: [] });
+      .mockResolvedValue({ plan: {} as WeeklyPlan, shopping: [] });
     render(
       <MealDetail
         meal={makeMeal()}

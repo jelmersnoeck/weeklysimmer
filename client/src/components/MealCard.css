@@ -32,7 +32,16 @@
   color: var(--ink-60);
 }
 
-.meal-card__time {
+.meal-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: 0.8rem;
+  color: var(--ink-60);
+}
+
+.meal-card__time,
+.meal-card__kcal {
   font-size: 0.8rem;
   color: var(--ink-60);
 }

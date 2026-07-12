@@ -26,9 +26,18 @@ export function MealCard({ meal, onSelect }: MealCardProps) {
     >
       <span className="meal-card__title">{meal.title}</span>
       <span className="meal-card__cuisine">{meal.cuisine}</span>
-      {totalMinutes !== null && (
-        <span className="meal-card__time">
-          ⏱ <span className="mono">{totalMinutes}</span> min
+      {(totalMinutes !== null || meal.caloriesPerServing != null) && (
+        <span className="meal-card__meta">
+          {totalMinutes !== null && (
+            <span className="meal-card__time">
+              ⏱ <span className="mono">{totalMinutes}</span> min
+            </span>
+          )}
+          {meal.caloriesPerServing != null && (
+            <span className="meal-card__kcal">
+              <span className="mono">{meal.caloriesPerServing}</span> kcal
+            </span>
+          )}
         </span>
       )}
       <span className="meal-card__tags">
