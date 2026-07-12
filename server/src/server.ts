@@ -12,6 +12,7 @@ import {
   createAnthropicCurator,
   makeAnthropicClient,
 } from "./llm/anthropicClient.js";
+import { sharedStore } from "./jobs/registry.js";
 
 const db = openDb(process.env.DATABASE_PATH ?? "./mealplanner.db");
 
@@ -26,6 +27,8 @@ if (count.n === 0) {
 const curator = createAnthropicCurator(makeAnthropicClient());
 const port = Number(process.env.PORT ?? 3001);
 
-createApp(db, { curator }).listen(port, () => {
+// One persistent store for the life of the process so job status survives
+// across requests (clients poll GET /api/jobs/:id after generation is enqueued).
+createApp(db, { curator, store: sharedStore }).listen(port, () => {
   console.log(`server on ${port}`);
 });

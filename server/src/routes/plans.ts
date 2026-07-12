@@ -10,7 +10,6 @@ import {
   saveShoppingItems,
   getShoppingItems,
 } from "../db/plansRepo.js";
-import { generatePlan } from "../llm/curationService.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
 import {
@@ -20,6 +19,8 @@ import {
 import type { EnabledSlot, Meal, Slot } from "../domain/types.js";
 import type { RawMeal } from "../llm/planSchema.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
+import type { JobStore } from "../jobs/registry.js";
+import { enqueueGeneration } from "../jobs/generation.js";
 
 /** An error carrying an HTTP status the error middleware turns into `{ error }`. */
 class HttpError extends Error {
@@ -54,12 +55,15 @@ function scaleRawMeal(raw: RawMeal, servings: number): Meal {
 /** Routes for weekly plans, meal ratings and single-meal regeneration. */
 export function plansRouter(
   db: Database.Database,
-  deps: { curator: PlanCurator }
+  deps: { curator: PlanCurator; store: JobStore }
 ): Router {
   const router = Router();
 
-  // Generate + persist a new weekly plan.
-  router.post("/plans/generate", async (req, res) => {
+  // Kick off generation of a new weekly plan as a background job. Validation is
+  // synchronous (400 on bad input, before any job is created); the actual
+  // curation/persistence runs asynchronously so the client isn't held for
+  // minutes. Returns 202 with the job id to poll via GET /api/jobs/:id.
+  router.post("/plans/generate", (req, res) => {
     const { weekStart, onHand, note, avoid, enabledSlots } = req.body ?? {};
     if (typeof weekStart !== "string" || weekStart.length === 0) {
       throw new HttpError(400, "weekStart must be a non-empty string");
@@ -102,18 +106,18 @@ export function plansRouter(
       }));
     }
 
-    const { plan, shopping } = await generatePlan(db, deps.curator, {
-      weekStart,
-      onHand,
-      note: typeof note === "string" ? note : "",
-      avoid: Array.isArray(avoid) ? avoid : [],
-      enabledSlots: slots,
-    });
+    const { jobId } = enqueueGeneration(
+      { db, curator: deps.curator, store: deps.store },
+      {
+        weekStart,
+        onHand,
+        note: typeof note === "string" ? note : "",
+        avoid: Array.isArray(avoid) ? avoid : [],
+        enabledSlots: slots,
+      },
+    );
 
-    const id = savePlan(db, plan);
-    saveShoppingItems(db, id, shopping);
-
-    res.status(201).json({ planId: id, plan: getPlan(db, id), shopping });
+    res.status(202).json({ jobId });
   });
 
   // List plan summaries, newest first.

@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
+import type { Express } from "express";
 import type Database from "better-sqlite3";
 import { openDb } from "../../src/db/index.js";
 import { seedSettings } from "../../src/db/seed.js";
 import { createApp } from "../../src/app.js";
+import { createJobStore, type JobStore } from "../../src/jobs/registry.js";
 import type {
   PlanCurator,
   CuratorInput,
@@ -90,8 +92,9 @@ function fakeCurator(
 }
 
 function makeApp(): {
-  app: ReturnType<typeof createApp>;
+  app: Express;
   db: Database.Database;
+  store: JobStore;
   regenCalls: RegenerateMealInput[];
   curateCalls: CuratorInput[];
 } {
@@ -99,8 +102,42 @@ function makeApp(): {
   seedSettings(db);
   const regenCalls: RegenerateMealInput[] = [];
   const curateCalls: CuratorInput[] = [];
-  const app = createApp(db, { curator: fakeCurator(regenCalls, curateCalls) });
-  return { app, db, regenCalls, curateCalls };
+  const store = createJobStore();
+  const app = createApp(db, {
+    curator: fakeCurator(regenCalls, curateCalls),
+    store,
+  });
+  return { app, db, store, regenCalls, curateCalls };
+}
+
+/** Poll a job to a terminal state. Each request round-trip yields the event
+ * loop, letting the (fake, immediately-resolving) background work settle — no
+ * real timers or network. */
+async function waitForJob(app: Express, jobId: string) {
+  for (let i = 0; i < 50; i++) {
+    const res = await request(app).get(`/api/jobs/${jobId}`);
+    if (res.body.status === "done" || res.body.status === "error") {
+      return res.body as {
+        id: string;
+        status: string;
+        planId: number | null;
+        error: string | null;
+      };
+    }
+  }
+  throw new Error("job did not reach a terminal state");
+}
+
+/** Drive the full async generate flow and return the persisted plan. */
+async function createPlan(app: Express, body: Record<string, unknown>) {
+  const res = await request(app).post("/api/plans/generate").send(body);
+  expect(res.status).toBe(202);
+  const jobId = res.body.jobId as string;
+  const job = await waitForJob(app, jobId);
+  expect(job.status).toBe("done");
+  const planId = job.planId!;
+  const get = await request(app).get(`/api/plans/${planId}`);
+  return { planId, plan: get.body.plan, shopping: get.body.shopping, jobId };
 }
 
 const generateBody = {
@@ -111,42 +148,58 @@ const generateBody = {
 };
 
 describe("POST /api/plans/generate", () => {
-  it("creates a plan, scales ingredients x3 and aggregates shopping", async () => {
+  it("returns 202 + jobId and does not persist synchronously", async () => {
     const { app, db } = makeApp();
     const res = await request(app).post("/api/plans/generate").send(generateBody);
 
-    expect(res.status).toBe(201);
-    expect(typeof res.body.planId).toBe("number");
+    expect(res.status).toBe(202);
+    expect(typeof res.body.jobId).toBe("string");
+    // no full plan shape in the immediate response
+    expect(res.body.plan).toBeUndefined();
+    expect(res.body.planId).toBeUndefined();
+    db.close();
+  });
 
+  it("completes in the background: plan persists, scaled x3, shopping aggregated", async () => {
+    const { app, db } = makeApp();
+    const { plan, shopping, planId } = await createPlan(app, generateBody);
+
+    expect(typeof planId).toBe("number");
     // ingredients scaled by household servings (2.8 -> 3)
-    const dinner = res.body.plan.meals.find(
-      (m: { slot: string }) => m.slot === "dinner",
-    );
+    const dinner = plan.meals.find((m: { slot: string }) => m.slot === "dinner");
     const chicken = dinner.ingredients.find(
       (i: { name: string }) => i.name === "chicken breast",
     );
     expect(chicken.quantity).toBe(450); // 150 * 3
 
     // shopping excludes the leftover lunch: only the dinner's chicken 150 * 3 = 450
-    const shopChicken = res.body.shopping.find(
+    const shopChicken = shopping.find(
       (s: { name: string }) => s.name.toLowerCase() === "chicken breast",
     );
     expect(shopChicken.totalQuantity).toBe(450);
-
-    // follow-up GET finds it
-    const get = await request(app).get(`/api/plans/${res.body.planId}`);
-    expect(get.status).toBe(200);
-    expect(get.body.plan.id).toBe(res.body.planId);
     db.close();
   });
 
-  it("returns 400 when weekStart is missing", async () => {
+  it("shows the job via GET /api/jobs/:id", async () => {
     const { app, db } = makeApp();
+    const res = await request(app).post("/api/plans/generate").send(generateBody);
+    const jobId = res.body.jobId;
+
+    const job = await waitForJob(app, jobId);
+    expect(job.id).toBe(jobId);
+    expect(job.status).toBe("done");
+    expect(typeof job.planId).toBe("number");
+    db.close();
+  });
+
+  it("returns 400 when weekStart is missing, creating no job", async () => {
+    const { app, db, store } = makeApp();
     const res = await request(app)
       .post("/api/plans/generate")
       .send({ onHand: [], note: "", avoid: [] });
     expect(res.status).toBe(400);
     expect(res.body.error).toBeTruthy();
+    expect(store.listJobs()).toHaveLength(0);
     db.close();
   });
 
@@ -171,7 +224,7 @@ describe("POST /api/plans/generate", () => {
 
   it("derives enabledSlots from the settings default (all 35) when omitted", async () => {
     const { app, db, curateCalls } = makeApp();
-    await request(app).post("/api/plans/generate").send(generateBody);
+    await createPlan(app, generateBody);
     expect(curateCalls).toHaveLength(1);
     // seeded mealSchedule is all-true => 5 slots x 7 days = 35 cells
     expect(curateCalls[0].enabledSlots).toHaveLength(35);
@@ -186,9 +239,7 @@ describe("POST /api/plans/generate", () => {
       { day: 0, slot: "dinner" },
       { day: 2, slot: "lunch" },
     ];
-    await request(app)
-      .post("/api/plans/generate")
-      .send({ ...generateBody, enabledSlots });
+    await createPlan(app, { ...generateBody, enabledSlots });
     expect(curateCalls[0].enabledSlots).toEqual(enabledSlots);
     db.close();
   });
@@ -213,8 +264,8 @@ describe("POST /api/plans/generate", () => {
   });
 });
 
-describe("GET /api/plans", () => {
-  it("lists plan summaries newest first", async () => {
+describe("GET /api/jobs", () => {
+  it("lists jobs newest first", async () => {
     const { app, db } = makeApp();
     const a = await request(app)
       .post("/api/plans/generate")
@@ -222,12 +273,39 @@ describe("GET /api/plans", () => {
     const b = await request(app)
       .post("/api/plans/generate")
       .send({ ...generateBody, weekStart: "2026-07-13" });
+    await waitForJob(app, a.body.jobId);
+    await waitForJob(app, b.body.jobId);
+
+    const res = await request(app).get("/api/jobs");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].id).toBe(b.body.jobId);
+    expect(res.body[1].id).toBe(a.body.jobId);
+    db.close();
+  });
+});
+
+describe("GET /api/jobs/:id", () => {
+  it("returns 404 for an unknown job", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app).get("/api/jobs/does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeTruthy();
+    db.close();
+  });
+});
+
+describe("GET /api/plans", () => {
+  it("lists plan summaries newest first", async () => {
+    const { app, db } = makeApp();
+    const a = await createPlan(app, { ...generateBody, weekStart: "2026-07-06" });
+    const b = await createPlan(app, { ...generateBody, weekStart: "2026-07-13" });
 
     const res = await request(app).get("/api/plans");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
-    expect(res.body[0].id).toBe(b.body.planId);
-    expect(res.body[1].id).toBe(a.body.planId);
+    expect(res.body[0].id).toBe(b.planId);
+    expect(res.body[1].id).toBe(a.planId);
     db.close();
   });
 });
@@ -243,10 +321,8 @@ describe("GET /api/plans/:id", () => {
 
   it("returns plan and shopping only", async () => {
     const { app, db } = makeApp();
-    const created = await request(app)
-      .post("/api/plans/generate")
-      .send(generateBody);
-    const res = await request(app).get(`/api/plans/${created.body.planId}`);
+    const created = await createPlan(app, generateBody);
+    const res = await request(app).get(`/api/plans/${created.planId}`);
 
     expect(res.status).toBe(200);
     expect(res.body.plan.weekStart).toBe("2026-07-13");
@@ -259,11 +335,9 @@ describe("GET /api/plans/:id", () => {
 describe("POST /api/meals/:mealId/rate", () => {
   it("rates a meal and the rating shows on a later GET", async () => {
     const { app, db } = makeApp();
-    const created = await request(app)
-      .post("/api/plans/generate")
-      .send(generateBody);
-    const planId = created.body.planId;
-    const mealId = created.body.plan.meals.find(
+    const created = await createPlan(app, generateBody);
+    const planId = created.planId;
+    const mealId = created.plan.meals.find(
       (m: { slot: string }) => m.slot === "dinner",
     ).id;
 
@@ -321,11 +395,9 @@ describe("POST /api/meals/:mealId/rate", () => {
 describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
   it("swaps one meal, re-aggregates shopping and resets the rating", async () => {
     const { app, db } = makeApp();
-    const created = await request(app)
-      .post("/api/plans/generate")
-      .send(generateBody);
-    const planId = created.body.planId;
-    const dinner = created.body.plan.meals.find(
+    const created = await createPlan(app, generateBody);
+    const planId = created.planId;
+    const dinner = created.plan.meals.find(
       (m: { slot: string }) => m.slot === "dinner",
     );
 
@@ -373,15 +445,13 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
 
   it("passes the target meal's protein class through to the curator", async () => {
     const { app, db, regenCalls } = makeApp();
-    const created = await request(app)
-      .post("/api/plans/generate")
-      .send(generateBody);
-    const dinner = created.body.plan.meals.find(
+    const created = await createPlan(app, generateBody);
+    const dinner = created.plan.meals.find(
       (m: { slot: string }) => m.slot === "dinner",
     );
 
     await request(app).post(
-      `/api/plans/${created.body.planId}/meals/${dinner.id}/regenerate`,
+      `/api/plans/${created.planId}/meals/${dinner.id}/regenerate`,
     );
 
     expect(regenCalls).toHaveLength(1);
@@ -399,11 +469,9 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
 
   it("returns 404 when the meal is not in the plan", async () => {
     const { app, db } = makeApp();
-    const created = await request(app)
-      .post("/api/plans/generate")
-      .send(generateBody);
+    const created = await createPlan(app, generateBody);
     const res = await request(app).post(
-      `/api/plans/${created.body.planId}/meals/99999/regenerate`,
+      `/api/plans/${created.planId}/meals/99999/regenerate`,
     );
     expect(res.status).toBe(404);
     db.close();

@@ -3,9 +3,14 @@ import type Database from "better-sqlite3";
 import type { PlanCurator } from "./llm/anthropicClient.js";
 import { settingsRouter } from "./routes/settings.js";
 import { plansRouter } from "./routes/plans.js";
+import { jobsRouter } from "./routes/jobs.js";
+import { sharedStore, type JobStore } from "./jobs/registry.js";
 
 export interface AppDeps {
   curator: PlanCurator;
+  /** Generation job store. Defaults to the process-wide singleton; tests inject
+   * an isolated store so job state never leaks between cases. */
+  store?: JobStore;
 }
 
 /**
@@ -19,8 +24,11 @@ export function createApp(db: Database.Database, deps: AppDeps): express.Express
   const app = express();
   app.use(express.json());
 
+  const store = deps.store ?? sharedStore;
+
   app.use("/api", settingsRouter(db));
-  app.use("/api", plansRouter(db, deps));
+  app.use("/api", plansRouter(db, { curator: deps.curator, store }));
+  app.use("/api", jobsRouter(store));
 
   // Final error handler. Express v5 forwards rejected async handlers here.
   app.use(
