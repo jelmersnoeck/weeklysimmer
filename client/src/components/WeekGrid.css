@@ -1,11 +1,17 @@
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  /* One track for the day heading, then one per slot. Cross-day rows share
+     these tracks (via subgrid) so every band is the height of its tallest
+     cell and reads as a clean horizontal row. */
+  grid-template-rows: auto repeat(5, auto);
   gap: var(--space-3);
 }
 
 .week-grid__day {
+  grid-row: 1 / span 6;
   display: grid;
+  grid-template-rows: subgrid;
   gap: var(--space-3);
   align-content: start;
 }
@@ -22,14 +28,17 @@
   display: none;
 }
 
+/* The slots wrapper collapses so each slot participates directly in the day's
+   subgrid, aligning slot bands across all seven days. */
 .week-grid__slots {
-  display: grid;
-  gap: var(--space-3);
+  display: contents;
 }
 
 .week-grid__slot {
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: var(--space-1);
+  min-height: 0;
 }
 
 .week-grid__slot-label {
@@ -40,8 +49,17 @@
   color: var(--ink-40);
 }
 
+/* Cards and empty cells stretch to fill their band so every cell in a row
+   matches the tallest, regardless of title/tag wrapping. */
+.week-grid__slot > .meal-card,
+.week-grid__empty {
+  height: 100%;
+}
+
 .week-grid__empty {
   margin: 0;
+  display: flex;
+  align-items: center;
   font-size: 0.85rem;
   color: var(--ink-40);
   border: 1px dashed var(--sage-line);
@@ -49,11 +67,19 @@
   padding: var(--space-3);
 }
 
-/* Reflow to a stacked, single-column board on narrow screens. */
+/* Reflow to a stacked, single-column board on narrow screens. Days stack and
+   their slots reflow into an auto-fit grid; cross-day alignment no longer
+   applies, so the subgrid tracks are released. */
 @media (max-width: 900px) {
   .week-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
     gap: var(--space-6);
+  }
+
+  .week-grid__day {
+    grid-row: auto;
+    grid-template-rows: none;
   }
 
   .week-grid__day-short {
@@ -65,6 +91,9 @@
   }
 
   .week-grid__slots {
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3);
+    align-items: stretch;
   }
 }
