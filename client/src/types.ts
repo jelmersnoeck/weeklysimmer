@@ -60,22 +60,69 @@ export interface ShoppingItem {
   checked: boolean;
 }
 
-export interface Member {
-  label: string;
-  consumptionFactor: number;
+// --- Settings v2 — household food preferences. ---
+
+export type Frequency = "never" | "occasionally" | "weekly" | "often";
+export type Appetite = "light" | "standard" | "hearty" | "very_active";
+export type MemberType = "adult" | "child";
+export type Diet =
+  | "none"
+  | "vegetarian"
+  | "vegan"
+  | "pescatarian"
+  | "low_fodmap"
+  | "gluten_free"
+  | "dairy_free";
+
+export interface HouseholdMember {
+  id: string;
+  name?: string;
+  type: MemberType;
+  appetite: Appetite;
+}
+
+export interface ProteinPref {
+  key: string;
+  frequency: Frequency;
 }
 
 export interface Settings {
-  members: Member[];
-  restrictions: string[];
-  avoidIngredients: string[];
-  proteinCadence: {
-    veg_per_week: number;
-    red_or_high_fat_per_week: number;
-  };
-  effort: string;
-  defaultVegQuantities: Record<string, unknown>;
+  configured: boolean;
+  household: HouseholdMember[];
+  proteins: ProteinPref[];
+  vegetablesLiked: string[];
+  fruitsLiked: string[];
+  cuisinesLiked: string[];
+  dishTypesLiked: string[];
+  flavoursLiked: string[];
+  avoid: string[];
+  diet: Diet;
+  effort: "easy" | "medium" | "hard";
+  // Which meals to plan per slot; NOT edited on the settings screen — carried through as-is.
   mealSchedule: MealSchedule;
+}
+
+// Canonical option lists the preferences UI renders from (GET /api/options).
+export interface Options {
+  proteins: string[];
+  cuisines: string[];
+  dishTypes: string[];
+  flavours: string[];
+  avoids: string[];
+  diets: string[];
+  vegetables: string[];
+  fruits: string[];
+  frequencies: string[];
+  appetites: string[];
+  memberTypes: string[];
+  appetiteFactor: Record<MemberType, Record<Appetite, number>>;
+}
+
+// A non-blocking warning that a selection clashes with the chosen diet.
+export interface DietConflict {
+  field: "proteins" | "flavours" | "dishTypes";
+  key: string;
+  message: string;
 }
 
 // A full plan payload as returned by GET /api/plans/:id and generate.

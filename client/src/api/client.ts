@@ -2,9 +2,11 @@
 // Every call throws an Error carrying the server's { error } message on non-2xx.
 
 import type {
+  DietConflict,
   GeneratePlanInput,
   GeneratePlanResult,
   Job,
+  Options,
   PlanBundle,
   PlanSummary,
   Settings,
@@ -34,6 +36,25 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function getSettings(): Promise<Settings> {
   return request<Settings>("/api/settings");
+}
+
+// Persist the full settings profile. The server forces configured:true and
+// returns the saved settings plus any non-blocking diet conflicts.
+export function updateSettings(
+  settings: Settings,
+): Promise<{ settings: Settings; conflicts: DietConflict[] }> {
+  return request<{ settings: Settings; conflicts: DietConflict[] }>(
+    "/api/settings",
+    {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    },
+  );
+}
+
+// Canonical option lists + appetite-factor table for the preferences UI.
+export function getOptions(): Promise<Options> {
+  return request<Options>("/api/options");
 }
 
 // Kicks off background generation; resolves to the job handle from the 202.
