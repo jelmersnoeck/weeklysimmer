@@ -27,11 +27,13 @@ describe("NewWeekForm", () => {
       <NewWeekForm
         onGenerate={onGenerate}
         recentTitles={["Leek soup", "Kale salad"]}
+        today={new Date(2026, 6, 12)}
       />,
     );
 
-    await user.clear(screen.getByLabelText(/week start/i));
-    await user.type(screen.getByLabelText(/week start/i), "2026-07-13");
+    // Week selector offers upcoming Monday-started weeks; the coming Monday
+    // (13 Jul, since 12 Jul 2026 is a Sunday) is the default.
+    await user.selectOptions(screen.getByLabelText(/^week$/i), "2026-07-13");
 
     const vegInput = screen.getByLabelText(/add a vegetable/i);
     await user.type(vegInput, "leek{enter}");

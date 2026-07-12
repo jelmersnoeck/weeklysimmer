@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { GeneratePlanInput } from "../types";
+import { upcomingWeekOptions } from "../lib/weeks";
 import "./NewWeekForm.css";
 
 interface NewWeekFormProps {
@@ -7,13 +8,8 @@ interface NewWeekFormProps {
   recentTitles: string[];
   onCancel?: () => void;
   submitting?: boolean;
-}
-
-function mondayOfThisWeek(): string {
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7; // 0 = Mon
-  now.setDate(now.getDate() - day);
-  return now.toISOString().slice(0, 10);
+  /** Injectable "now" for deterministic tests; defaults to the real current date. */
+  today?: Date;
 }
 
 export function NewWeekForm({
@@ -21,8 +17,13 @@ export function NewWeekForm({
   recentTitles,
   onCancel,
   submitting = false,
+  today,
 }: NewWeekFormProps) {
-  const [weekStart, setWeekStart] = useState(mondayOfThisWeek);
+  const weekOptions = useMemo(
+    () => upcomingWeekOptions(today ?? new Date()),
+    [today],
+  );
+  const [weekStart, setWeekStart] = useState(weekOptions[0].weekStart);
   const [vegBox, setVegBox] = useState<string[]>([]);
   const [vegDraft, setVegDraft] = useState("");
   const [note, setNote] = useState("");
@@ -59,14 +60,19 @@ export function NewWeekForm({
   return (
     <form className="new-week" onSubmit={handleSubmit} aria-label="Plan a new week">
       <div className="new-week__field">
-        <label htmlFor="nw-week-start">Week start</label>
-        <input
+        <label htmlFor="nw-week-start">Week</label>
+        <select
           id="nw-week-start"
-          type="date"
           value={weekStart}
           onChange={(e) => setWeekStart(e.target.value)}
-          required
-        />
+        >
+          {weekOptions.map((opt) => (
+            <option key={opt.weekStart} value={opt.weekStart}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <p className="new-week__hint">Weeks run Monday to Sunday.</p>
       </div>
 
       <div className="new-week__field">
