@@ -60,6 +60,16 @@
   box-shadow: var(--shadow-soft);
 }
 
+.app__boot {
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+  color: var(--ink-60);
+}
+
+.app__boot--error {
+  color: var(--beet);
+}
+
 @media (max-width: 560px) {
   .app {
     padding: var(--space-4) var(--space-4) var(--space-8);
