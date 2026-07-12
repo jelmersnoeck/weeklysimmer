@@ -16,14 +16,27 @@ import type { Meal } from "./types.js";
  * @returns the subset of `vegBox` (original casing) that no meal used.
  */
 export function unusedVegetables(vegBox: string[], meals: Meal[]): string[] {
-  const norm = (s: string) => s.trim().toLowerCase();
-  const stripPlural = (s: string) => (s.endsWith("s") ? s.slice(0, -1) : s);
+  // Reduce common English plurals to a singular stem: ies->y, es->'', s->''.
+  const singularize = (w: string): string => {
+    if (w.endsWith("ies")) return w.slice(0, -3) + "y";
+    if (w.endsWith("es")) return w.slice(0, -2);
+    if (w.endsWith("s")) return w.slice(0, -1);
+    return w;
+  };
+  // Split a name into singularized word tokens (e.g. "grated carrots" -> ["grated","carrot"]).
+  const tokens = (s: string): string[] =>
+    s.trim().toLowerCase().split(/[^a-z]+/).filter(Boolean).map(singularize);
 
-  const ingredientNames = meals.flatMap((m) => m.ingredients.map((i) => norm(i.name)));
+  // The set of every singularized word appearing in any ingredient name.
+  const usedWords = new Set(meals.flatMap((m) => m.ingredients.flatMap((i) => tokens(i.name))));
 
+  // A box veg counts as used if its head noun (last word) appears as an ingredient
+  // word — whole-word matching, so "peas" (pea) does NOT match "peanut", and
+  // "tomatoes" (tomato) DOES match "grated tomato".
   const isUsed = (veg: string): boolean => {
-    const base = stripPlural(norm(veg));
-    return ingredientNames.some((n) => n.includes(base) || stripPlural(n).includes(base));
+    const words = tokens(veg);
+    const head = words[words.length - 1];
+    return head != null && usedWords.has(head);
   };
 
   return vegBox.filter((veg) => !isUsed(veg));

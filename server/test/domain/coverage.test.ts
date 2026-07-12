@@ -50,4 +50,14 @@ describe("unusedVegetables", () => {
   it("returns nothing for an empty box", () => {
     expect(unusedVegetables([], [meal([ing("carrot")])])).toEqual([]);
   });
+
+  it("matches -es / -oes plurals (tomatoes ↔ tomato, potatoes ↔ potato)", () => {
+    const meals = [meal([ing("grated tomato"), ing("mashed potato")])];
+    expect(unusedVegetables(["tomatoes", "potatoes"], meals)).toEqual([]);
+  });
+
+  it("does not falsely match on shared prefixes (peas must not match peanut)", () => {
+    const meals = [meal([ing("peanut butter"), ing("cornstarch")])];
+    expect(unusedVegetables(["peas", "corn"], meals)).toEqual(["peas", "corn"]);
+  });
 });
