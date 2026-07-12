@@ -10,9 +10,15 @@ interface WeekGridProps {
 
 export function WeekGrid({ plan, onSelectMeal }: WeekGridProps) {
   const byDay: Meal[][] = Array.from({ length: 7 }, () => []);
+  const usedSlots = new Set<Meal["slot"]>();
   for (const meal of plan.meals) {
     if (meal.day >= 0 && meal.day < 7) byDay[meal.day].push(meal);
+    usedSlots.add(meal.slot);
   }
+
+  // Only render slot rows that at least one meal in the week uses, so disabled
+  // meal types don't show 7 empty cells. Missing single cells still render empty.
+  const visibleSlots = SLOT_ORDER.filter((slot) => usedSlots.has(slot));
 
   return (
     <div className="week-grid" role="list" aria-label="Week board">
@@ -30,7 +36,7 @@ export function WeekGrid({ plan, onSelectMeal }: WeekGridProps) {
               <span className="week-grid__day-long">{DAY_LABELS_LONG[day]}</span>
             </h3>
             <div className="week-grid__slots">
-              {SLOT_ORDER.map((slot) => {
+              {visibleSlots.map((slot) => {
                 const meal = meals.find((m) => m.slot === slot);
                 return (
                   <div key={slot} className="week-grid__slot">
