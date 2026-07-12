@@ -50,9 +50,9 @@ function fakeClient(parsed: unknown): {
   const calls: Array<Record<string, unknown>> = [];
   const client: MinimalAnthropicClient = {
     messages: {
-      async parse(params) {
+      stream(params) {
         calls.push(params as Record<string, unknown>);
-        return { parsed_output: parsed };
+        return { finalMessage: async () => ({ parsed_output: parsed }) };
       },
     },
   };

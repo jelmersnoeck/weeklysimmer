@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import type { z } from "zod";
 import type { Settings, Meal, Slot } from "../domain/types.js";
 import { buildCurationPrompt, buildRegeneratePrompt } from "./prompt.js";
 import { planSchema, rawMealSchema, type RawPlan, type RawMeal } from "./planSchema.js";
@@ -30,78 +31,67 @@ export interface PlanCurator {
 
 /**
  * Minimal shape of the Anthropic client the wrapper actually uses. Narrow on
- * purpose so a fake can satisfy it in tests without a network call. We only call
- * `messages.parse` and only read `parsed_output` off the result.
+ * purpose so a fake can satisfy it in tests without a network call. We stream the
+ * request (required for large outputs — a 21-meal plan exceeds the SDK's
+ * non-streaming size guard) and read `parsed_output` off the final message.
  */
 export interface MinimalAnthropicClient {
   messages: {
-    parse(params: Record<string, unknown>): Promise<{ parsed_output?: unknown }>;
+    stream(params: Record<string, unknown>): {
+      finalMessage(): Promise<{ parsed_output?: unknown }>;
+    };
   };
 }
 
 const MODEL = "claude-opus-4-8";
-// A 21-meal plan is large; give the model plenty of room. The TS SDK auto-extends
-// the HTTP timeout for large max_tokens on non-streaming requests.
+// A 21-meal plan is a large output. We stream (see MinimalAnthropicClient) so the
+// SDK doesn't reject the request under its 10-minute non-streaming ceiling.
 const MAX_TOKENS = 32000;
 
 /**
+ * Call the model with the web_search server tool and schema-constrained structured
+ * output, streaming the response, then re-validate the parsed result against `schema`
+ * (defense in depth). Throws a clear, labelled Error on empty or invalid output.
+ */
+async function curateStructured<T>(
+  client: MinimalAnthropicClient,
+  schema: z.ZodType<T>,
+  prompt: string,
+  label: string,
+): Promise<T> {
+  const stream = client.messages.stream({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    thinking: { type: "adaptive" },
+    // web_search has code execution built in — do NOT also declare code_execution.
+    tools: [{ type: "web_search_20260209", name: "web_search" }],
+    output_config: { format: zodOutputFormat(schema) },
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const response = await stream.finalMessage();
+  const parsed = response.parsed_output;
+  if (parsed == null) {
+    throw new Error(`LLM ${label} returned no structured output (parsed_output was empty)`);
+  }
+
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error(`LLM ${label} returned invalid data: ${result.error.message}`);
+  }
+  return result.data;
+}
+
+/**
  * Adapter: wraps a (real or fake) Anthropic client behind the PlanCurator port.
- *
- * `curate` builds the prompt, calls the model with the web_search server tool and
- * schema-constrained structured output, then re-validates the returned data with
- * `planSchema.parse` and returns the typed plan. Throws a clear Error on invalid data.
  */
 export function createAnthropicCurator(client: MinimalAnthropicClient): PlanCurator {
   return {
-    async curate(input: CuratorInput): Promise<RawPlan> {
-      const prompt = buildCurationPrompt(input);
-
-      const response = await client.messages.parse({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        thinking: { type: "adaptive" },
-        // web_search has code execution built in — do NOT also declare code_execution.
-        tools: [{ type: "web_search_20260209", name: "web_search" }],
-        output_config: { format: zodOutputFormat(planSchema) },
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const parsed = response.parsed_output;
-      if (parsed == null) {
-        throw new Error("LLM curation returned no structured output (parsed_output was empty)");
-      }
-
-      const result = planSchema.safeParse(parsed);
-      if (!result.success) {
-        throw new Error(`LLM curation returned an invalid plan: ${result.error.message}`);
-      }
-      return result.data;
+    curate(input: CuratorInput): Promise<RawPlan> {
+      return curateStructured(client, planSchema, buildCurationPrompt(input), "curation");
     },
-
-    async regenerateMeal(input: RegenerateMealInput): Promise<RawMeal> {
-      const prompt = buildRegeneratePrompt(input);
-
-      const response = await client.messages.parse({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        thinking: { type: "adaptive" },
-        tools: [{ type: "web_search_20260209", name: "web_search" }],
-        output_config: { format: zodOutputFormat(rawMealSchema) },
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const parsed = response.parsed_output;
-      if (parsed == null) {
-        throw new Error(
-          "LLM regeneration returned no structured output (parsed_output was empty)"
-        );
-      }
-
-      const result = rawMealSchema.safeParse(parsed);
-      if (!result.success) {
-        throw new Error(`LLM regeneration returned an invalid meal: ${result.error.message}`);
-      }
-      return result.data;
+    regenerateMeal(input: RegenerateMealInput): Promise<RawMeal> {
+      return curateStructured(client, rawMealSchema, buildRegeneratePrompt(input), "regeneration");
     },
   };
 }
