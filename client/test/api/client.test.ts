@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { generatePlan, getPlan } from "../../src/api/client";
+import { generatePlan, getJob, getPlan, listJobs } from "../../src/api/client";
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -15,9 +15,9 @@ afterEach(() => {
 });
 
 describe("generatePlan", () => {
-  test("POSTs to /api/plans/generate with the right body", async () => {
+  test("POSTs to /api/plans/generate and returns the jobId from a 202", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ planId: 7, plan: {}, shopping: [] }, true, 201),
+      jsonResponse({ jobId: "job-123" }, true, 202),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -39,7 +39,30 @@ describe("generatePlan", () => {
     expect(init.method).toBe("POST");
     expect(init.headers).toMatchObject({ "Content-Type": "application/json" });
     expect(JSON.parse(init.body)).toEqual(input);
-    expect(result.planId).toBe(7);
+    expect(result.jobId).toBe("job-123");
+  });
+});
+
+describe("jobs", () => {
+  test("listJobs GETs /api/jobs", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listJobs();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs");
+  });
+
+  test("getJob GETs /api/jobs/:id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ id: "job-123", status: "running" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const job = await getJob("job-123");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/jobs/job-123");
+    expect(job.id).toBe("job-123");
   });
 });
 

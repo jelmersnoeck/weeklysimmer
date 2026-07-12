@@ -103,6 +103,20 @@ export interface GeneratePlanInput {
   enabledSlots: EnabledSlot[];
 }
 
-export interface GeneratePlanResult extends PlanBundle {
-  planId: number;
+// POST /api/plans/generate now runs generation in the background and returns
+// a job handle (202) rather than the finished plan.
+export interface GeneratePlanResult {
+  jobId: string;
+}
+
+export type JobStatus = "running" | "done" | "error";
+
+// A background plan-generation job (GET /api/jobs, GET /api/jobs/:id).
+export interface Job {
+  id: string;
+  status: JobStatus;
+  planId: number | null;
+  error: string | null;
+  weekStart: string;
+  createdAt: string;
 }

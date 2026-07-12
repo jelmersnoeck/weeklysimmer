@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   GeneratePlanInput,
   Meal,
@@ -6,7 +6,15 @@ import type {
   PlanBundle,
   PlanSummary,
 } from "../types";
-import { generatePlan, getPlan, getSettings, listPlans } from "../api/client";
+import {
+  generatePlan,
+  getJob,
+  getPlan,
+  getSettings,
+  listJobs,
+  listPlans,
+} from "../api/client";
+import { GeneratingPanel } from "../components/GeneratingPanel";
 import { MealDetail } from "../components/MealDetail";
 import { NewWeekForm } from "../components/NewWeekForm";
 import { ShoppingList } from "../components/ShoppingList";
@@ -29,6 +37,14 @@ interface DashboardProps {
 
 type Status = "loading" | "empty" | "ready" | "error";
 
+// The background generation job currently being polled, if any.
+interface ActiveJob {
+  id: string;
+  startedAt: number;
+}
+
+const POLL_INTERVAL_MS = 4000;
+
 function formatWeek(weekStart: string): string {
   const date = new Date(weekStart);
   if (Number.isNaN(date.getTime())) return weekStart;
@@ -47,8 +63,14 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [openMeal, setOpenMeal] = useState<Meal | null>(null);
+  const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [defaultSchedule, setDefaultSchedule] =
     useState<MealSchedule>(allOnSchedule);
+
+  // Keep the latest onSelectPlan in a ref so the polling effect can call it
+  // without listing it as a dependency (which would restart polling).
+  const onSelectPlanRef = useRef(onSelectPlan);
+  onSelectPlanRef.current = onSelectPlan;
 
   useEffect(() => {
     let active = true;
@@ -99,19 +121,85 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
     void load();
   }, [load]);
 
+  // Resume on reopen: if a job was still running when the tab was closed, pick
+  // the generating animation back up so it feels continuous.
+  useEffect(() => {
+    let active = true;
+    listJobs()
+      .then((jobs) => {
+        if (!active) return;
+        const running = jobs.find((j) => j.status === "running");
+        if (running) {
+          const startedAt = Date.parse(running.createdAt);
+          setActiveJob({
+            id: running.id,
+            startedAt: Number.isNaN(startedAt) ? Date.now() : startedAt,
+          });
+        }
+      })
+      .catch(() => {
+        // Non-fatal: no resume, the normal dashboard still loads.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Poll the active job until it settles. Uses a self-scheduling timeout so
+  // there's never an overlapping request, and cleans up on unmount / settle.
+  useEffect(() => {
+    if (!activeJob) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function poll(jobId: string) {
+      try {
+        const job = await getJob(jobId);
+        if (cancelled) return;
+        if (job.status === "done" && job.planId != null) {
+          const loaded = await getPlan(job.planId);
+          if (cancelled) return;
+          setBundle(loaded);
+          setRecentTitles(loaded.plan.meals.map((m) => m.title));
+          setStatus("ready");
+          setError(null);
+          setActiveJob(null);
+          onSelectPlanRef.current(job.planId);
+          return;
+        }
+        if (job.status === "error") {
+          setError(
+            job.error ??
+              "Could not generate the plan. Check the details and try again.",
+          );
+          setActiveJob(null);
+          setShowForm(true);
+          return;
+        }
+        // Still running — schedule the next poll.
+        timer = setTimeout(() => void poll(jobId), POLL_INTERVAL_MS);
+      } catch {
+        // Transient network/API hiccup: keep polling rather than giving up.
+        if (cancelled) return;
+        timer = setTimeout(() => void poll(jobId), POLL_INTERVAL_MS);
+      }
+    }
+
+    void poll(activeJob.id);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [activeJob]);
+
   async function handleGenerate(input: GeneratePlanInput) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await generatePlan(input);
-      setBundle({
-        plan: result.plan,
-        shopping: result.shopping,
-      });
-      setRecentTitles(result.plan.meals.map((m) => m.title));
+      const { jobId } = await generatePlan(input);
       setShowForm(false);
-      setStatus("ready");
-      onSelectPlan(result.planId);
+      setActiveJob({ id: jobId, startedAt: Date.now() });
     } catch (err) {
       setError(
         err instanceof Error
@@ -145,6 +233,15 @@ export function Dashboard({ selectedPlanId, onSelectPlan }: DashboardProps) {
   function handleRegenerated(next: PlanBundle) {
     setBundle(next);
     setOpenMeal(null);
+  }
+
+  // A running job takes over the view; polling loads the plan when it's done.
+  if (activeJob) {
+    return (
+      <div className="dashboard">
+        <GeneratingPanel startedAt={activeJob.startedAt} />
+      </div>
+    );
   }
 
   if (status === "loading") {

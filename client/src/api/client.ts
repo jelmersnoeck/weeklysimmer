@@ -4,6 +4,7 @@
 import type {
   GeneratePlanInput,
   GeneratePlanResult,
+  Job,
   PlanBundle,
   PlanSummary,
   Settings,
@@ -35,11 +36,20 @@ export function getSettings(): Promise<Settings> {
   return request<Settings>("/api/settings");
 }
 
+// Kicks off background generation; resolves to the job handle from the 202.
 export function generatePlan(input: GeneratePlanInput): Promise<GeneratePlanResult> {
   return request<GeneratePlanResult>("/api/plans/generate", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function listJobs(): Promise<Job[]> {
+  return request<Job[]>("/api/jobs");
+}
+
+export function getJob(id: string): Promise<Job> {
+  return request<Job>(`/api/jobs/${id}`);
 }
 
 export function listPlans(): Promise<PlanSummary[]> {
