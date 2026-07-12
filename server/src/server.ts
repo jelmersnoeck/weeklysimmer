@@ -1,4 +1,10 @@
-import "dotenv/config";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+import dotenv from "dotenv";
+// Load server/.env relative to this module, so the key is found no matter the cwd
+// (repo root under `npm run dev`, or dist/ for a build) — not just the process cwd.
+dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env") });
+
 import { openDb } from "./db/index.js";
 import { seedSettings } from "./db/seed.js";
 import { createApp } from "./app.js";
