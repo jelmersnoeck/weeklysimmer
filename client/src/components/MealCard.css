@@ -1,0 +1,45 @@
+.meal-card {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.meal-card:hover {
+  border-color: var(--herb);
+  box-shadow: var(--shadow-soft);
+}
+
+.meal-card--leftover {
+  background: var(--sage);
+  border-style: dashed;
+}
+
+.meal-card__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.meal-card__cuisine {
+  font-size: 0.8rem;
+  color: var(--ink-60);
+}
+
+.meal-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.meal-card__leftover-badge {
+  background: var(--squash);
+  color: var(--ink);
+  border-color: transparent;
+}

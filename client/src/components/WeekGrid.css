@@ -1,0 +1,70 @@
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.week-grid__day {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.week-grid__day-heading {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--sage-line);
+}
+
+.week-grid__day-long {
+  display: none;
+}
+
+.week-grid__slots {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.week-grid__slot {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.week-grid__slot-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+}
+
+.week-grid__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-40);
+  border: 1px dashed var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+/* Reflow to a stacked, single-column board on narrow screens. */
+@media (max-width: 900px) {
+  .week-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .week-grid__day-short {
+    display: none;
+  }
+
+  .week-grid__day-long {
+    display: inline;
+  }
+
+  .week-grid__slots {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
