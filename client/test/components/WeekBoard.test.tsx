@@ -47,6 +47,22 @@ describe("MealCard", () => {
     );
     expect(screen.getByText(/leftovers/i)).toBeInTheDocument();
   });
+
+  test("shows the total time badge when prep and cook are set", () => {
+    render(
+      <MealCard
+        meal={makeMeal({ prepMinutes: 10, cookMinutes: 15 })}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/25/)).toBeInTheDocument();
+    expect(screen.getByText(/min/)).toBeInTheDocument();
+  });
+
+  test("shows no time badge when prep and cook are absent", () => {
+    render(<MealCard meal={makeMeal()} onSelect={vi.fn()} />);
+    expect(screen.queryByText(/min/)).not.toBeInTheDocument();
+  });
 });
 
 describe("WeekGrid", () => {
@@ -63,6 +79,37 @@ describe("WeekGrid", () => {
     for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]) {
       expect(screen.getByText(day)).toBeInTheDocument();
     }
+  });
+
+  test("renders all five slot labels per day, including both snacks", () => {
+    const plan: WeeklyPlan = {
+      id: 3,
+      weekStart: "2026-07-13",
+      vegBox: ["leek"],
+      note: "",
+      status: "active",
+      meals: [
+        makeMeal({ id: 1, day: 0, slot: "breakfast", title: "Porridge" }),
+        makeMeal({ id: 2, day: 0, slot: "morning_snack", title: "Apple" }),
+        makeMeal({ id: 3, day: 0, slot: "lunch", title: "Salad" }),
+        makeMeal({ id: 4, day: 0, slot: "afternoon_snack", title: "Yoghurt" }),
+        makeMeal({ id: 5, day: 0, slot: "dinner", title: "Soup" }),
+      ],
+    };
+    render(<WeekGrid plan={plan} onSelectMeal={vi.fn()} />);
+    // Each of the five slot labels appears once per day (7 days).
+    for (const label of [
+      "Breakfast",
+      "Morning snack",
+      "Lunch",
+      "Afternoon snack",
+      "Dinner",
+    ]) {
+      expect(screen.getAllByText(label)).toHaveLength(7);
+    }
+    // The snack meals for Monday render in their cells.
+    expect(screen.getByText("Apple")).toBeInTheDocument();
+    expect(screen.getByText("Yoghurt")).toBeInTheDocument();
   });
 });
 
@@ -82,6 +129,22 @@ describe("MealDetail", () => {
 
     await user.click(screen.getByRole("button", { name: /rate 4 of 5/i }));
     expect(rateSpy).toHaveBeenCalledWith(1, 4);
+  });
+
+  test("shows the prep/cook/total time row when the fields are set", () => {
+    render(
+      <MealDetail
+        meal={makeMeal({ prepMinutes: 10, cookMinutes: 15 })}
+        planId={3}
+        onClose={vi.fn()}
+        onRated={vi.fn()}
+        onRegenerated={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Prep/)).toBeInTheDocument();
+    expect(screen.getByText(/Cook/)).toBeInTheDocument();
+    expect(screen.getByText(/Total/)).toBeInTheDocument();
+    expect(screen.getByText("25")).toBeInTheDocument();
   });
 
   test("clicking regenerate calls regenerateMeal", async () => {
