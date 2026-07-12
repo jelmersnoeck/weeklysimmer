@@ -231,6 +231,26 @@ describe("POST /api/meals/:mealId/rate", () => {
     expect(res.status).toBe(400);
     db.close();
   });
+
+  it("returns 404 when the meal does not exist", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post("/api/meals/99999/rate")
+      .send({ rating: 4 });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeTruthy();
+    db.close();
+  });
+
+  it("returns 400 for a non-numeric mealId", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post("/api/meals/abc/rate")
+      .send({ rating: 4 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+    db.close();
+  });
 });
 
 describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {

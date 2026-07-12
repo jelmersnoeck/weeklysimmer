@@ -144,12 +144,16 @@ export function listPlans(db: Database.Database): PlanSummary[] {
   }));
 }
 
+/** Returns the number of rows changed (0 when no meal has that id). */
 export function rateMeal(
   db: Database.Database,
   mealId: number,
   rating: number
-): void {
-  db.prepare("UPDATE meals SET rating = ? WHERE id = ?").run(rating, mealId);
+): number {
+  const info = db
+    .prepare("UPDATE meals SET rating = ? WHERE id = ?")
+    .run(rating, mealId);
+  return info.changes;
 }
 
 /**

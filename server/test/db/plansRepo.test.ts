@@ -146,9 +146,11 @@ describe("plansRepo", () => {
     const plan = getPlan(db, id)!;
     const mealId = plan.meals.find((m) => m.slot === "dinner")!.id!;
 
-    rateMeal(db, mealId, 4);
+    expect(rateMeal(db, mealId, 4)).toBe(1);
     const updated = getPlan(db, id)!;
     expect(updated.meals.find((m) => m.id === mealId)!.rating).toBe(4);
+    // rating a nonexistent meal changes no rows
+    expect(rateMeal(db, 999999, 3)).toBe(0);
     db.close();
   });
 

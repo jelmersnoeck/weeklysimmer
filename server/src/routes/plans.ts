@@ -97,6 +97,9 @@ export function plansRouter(
   // Rate a meal 1-5.
   router.post("/meals/:mealId/rate", (req, res) => {
     const mealId = Number(req.params.mealId);
+    if (Number.isNaN(mealId)) {
+      throw new HttpError(400, "mealId must be a number");
+    }
     const { rating } = req.body ?? {};
     if (
       typeof rating !== "number" ||
@@ -106,7 +109,9 @@ export function plansRouter(
     ) {
       throw new HttpError(400, "rating must be a number between 1 and 5");
     }
-    rateMeal(db, mealId, rating);
+    if (rateMeal(db, mealId, rating) === 0) {
+      throw new HttpError(404, "meal not found");
+    }
     res.json({ ok: true });
   });
 
