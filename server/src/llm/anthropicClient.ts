@@ -1,7 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
-import type { Settings, Meal, Slot, ProteinClass } from "../domain/types.js";
+import type {
+  Settings,
+  Meal,
+  Slot,
+  ProteinClass,
+  EnabledSlot,
+} from "../domain/types.js";
 import { buildCurationPrompt, buildRegeneratePrompt } from "./prompt.js";
 import { planSchema, rawMealSchema, type RawPlan, type RawMeal } from "./planSchema.js";
 
@@ -11,6 +17,7 @@ export interface CuratorInput {
   onHand: string[];
   note: string;
   avoid: string[];
+  enabledSlots: EnabledSlot[];
 }
 
 export interface RegenerateMealInput {

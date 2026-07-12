@@ -81,6 +81,10 @@ describe("generatePlan", () => {
     onHand: ["carrots", "spinach"],
     note: "lighter week",
     avoid: ["Tuna pasta bake"],
+    enabledSlots: [
+      { day: 0, slot: "dinner" as const },
+      { day: 1, slot: "lunch" as const },
+    ],
   };
 
   it("scales ingredient quantities by the household serving count (3)", async () => {
@@ -103,6 +107,8 @@ describe("generatePlan", () => {
     expect(calls[0].onHand).toEqual(input.onHand);
     expect(calls[0].avoid).toEqual(input.avoid);
     expect(calls[0].settings.members).toHaveLength(3);
+    // the enabled slots are passed straight through to the curator
+    expect(calls[0].enabledSlots).toEqual(input.enabledSlots);
   });
 
   it("carries meal fields through and builds a WeeklyPlan", async () => {

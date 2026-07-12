@@ -6,6 +6,10 @@ import {
 } from "../../src/llm/anthropicClient.js";
 import type { RawPlan } from "../../src/llm/planSchema.js";
 import type { Settings } from "../../src/domain/types.js";
+import {
+  defaultMealSchedule,
+  enabledSlotsFromSchedule,
+} from "../../src/domain/schedule.js";
 
 const settings: Settings = {
   members: [{ label: "Adult", consumptionFactor: 1.15 }],
@@ -14,6 +18,7 @@ const settings: Settings = {
   proteinCadence: { veg_per_week: 1, red_or_high_fat_per_week: 1 },
   effort: "easy",
   defaultVegQuantities: {},
+  mealSchedule: defaultMealSchedule(),
 };
 
 const input: CuratorInput = {
@@ -22,6 +27,7 @@ const input: CuratorInput = {
   onHand: ["carrots"],
   note: "",
   avoid: [],
+  enabledSlots: enabledSlotsFromSchedule(defaultMealSchedule()),
 };
 
 const validPlan: RawPlan = {

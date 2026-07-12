@@ -2,7 +2,12 @@ import type Database from "better-sqlite3";
 import { getSettings } from "../db/seed.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
-import type { Meal, ShoppingItem, WeeklyPlan } from "../domain/types.js";
+import type {
+  EnabledSlot,
+  Meal,
+  ShoppingItem,
+  WeeklyPlan,
+} from "../domain/types.js";
 import type { PlanCurator } from "./anthropicClient.js";
 
 export interface GeneratePlanInput {
@@ -10,6 +15,7 @@ export interface GeneratePlanInput {
   onHand: string[];
   note: string;
   avoid: string[];
+  enabledSlots: EnabledSlot[];
 }
 
 export interface GeneratePlanResult {

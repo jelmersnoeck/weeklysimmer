@@ -13,7 +13,11 @@ import {
 import { generatePlan } from "../llm/curationService.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
-import type { Meal } from "../domain/types.js";
+import {
+  SLOTS,
+  enabledSlotsFromSchedule,
+} from "../domain/schedule.js";
+import type { EnabledSlot, Meal, Slot } from "../domain/types.js";
 import type { RawMeal } from "../llm/planSchema.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
 
@@ -56,7 +60,7 @@ export function plansRouter(
 
   // Generate + persist a new weekly plan.
   router.post("/plans/generate", async (req, res) => {
-    const { weekStart, onHand, note, avoid } = req.body ?? {};
+    const { weekStart, onHand, note, avoid, enabledSlots } = req.body ?? {};
     if (typeof weekStart !== "string" || weekStart.length === 0) {
       throw new HttpError(400, "weekStart must be a non-empty string");
     }
@@ -67,11 +71,43 @@ export function plansRouter(
       throw new HttpError(400, "onHand entries must all be strings");
     }
 
+    // enabledSlots is optional: when omitted, derive it from the user's default
+    // meal schedule; when provided, validate every entry.
+    const validSlots = new Set<string>(SLOTS);
+    let slots: EnabledSlot[];
+    if (enabledSlots === undefined) {
+      slots = enabledSlotsFromSchedule(getSettings(db).mealSchedule);
+    } else {
+      if (!Array.isArray(enabledSlots)) {
+        throw new HttpError(400, "enabledSlots must be an array");
+      }
+      for (const e of enabledSlots) {
+        if (
+          typeof e !== "object" ||
+          e === null ||
+          !Number.isInteger(e.day) ||
+          e.day < 0 ||
+          e.day > 6 ||
+          !validSlots.has(e.slot)
+        ) {
+          throw new HttpError(
+            400,
+            "each enabledSlots entry needs a day 0-6 and a valid slot",
+          );
+        }
+      }
+      slots = enabledSlots.map((e: { day: number; slot: Slot }) => ({
+        day: e.day,
+        slot: e.slot,
+      }));
+    }
+
     const { plan, shopping } = await generatePlan(db, deps.curator, {
       weekStart,
       onHand,
       note: typeof note === "string" ? note : "",
       avoid: Array.isArray(avoid) ? avoid : [],
+      enabledSlots: slots,
     });
 
     const id = savePlan(db, plan);

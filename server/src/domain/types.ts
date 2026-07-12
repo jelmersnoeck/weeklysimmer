@@ -7,6 +7,15 @@ export type Slot =
 export type Difficulty = "easy" | "medium" | "hard";
 export type ProteinClass = "lean" | "red_or_high_fat" | "vegetarian";
 
+/** Which day/slot cells the user wants meals for: each slot maps to 7 booleans (Mon…Sun). */
+export type MealSchedule = Record<Slot, boolean[]>;
+
+/** A single enabled day/slot cell the planner should generate a meal for. */
+export interface EnabledSlot {
+  day: number; // 0=Mon .. 6=Sun
+  slot: Slot;
+}
+
 export interface Ingredient {
   name: string;
   quantity: number;   // per single recipe serving (normalized)
@@ -43,6 +52,7 @@ export interface Settings {
   proteinCadence: { veg_per_week: number; red_or_high_fat_per_week: number };
   effort: Difficulty;
   defaultVegQuantities: Record<string, { quantity: number; unit: string }>;
+  mealSchedule: MealSchedule;   // which day/slot cells the user wants meals for
 }
 
 export interface WeeklyPlan {

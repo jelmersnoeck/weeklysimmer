@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { buildCurationPrompt, buildRegeneratePrompt } from "../../src/llm/prompt.js";
+import {
+  defaultMealSchedule,
+  enabledSlotsFromSchedule,
+} from "../../src/domain/schedule.js";
 import type { Settings, Meal } from "../../src/domain/types.js";
 
 const settings: Settings = {
@@ -13,6 +17,7 @@ const settings: Settings = {
   proteinCadence: { veg_per_week: 1, red_or_high_fat_per_week: 1 },
   effort: "easy",
   defaultVegQuantities: {},
+  mealSchedule: defaultMealSchedule(),
 };
 
 const input = {
@@ -21,6 +26,7 @@ const input = {
   onHand: ["carrots", "leek", "spinach"],
   note: "prefer lighter meals this week",
   avoid: ["Lemon chicken with rice", "Tuna pasta bake"],
+  enabledSlots: enabledSlotsFromSchedule(defaultMealSchedule()),
 };
 
 describe("buildCurationPrompt", () => {
@@ -87,14 +93,36 @@ describe("buildCurationPrompt", () => {
     expect(prompt.toLowerCase()).toContain("repeat");
   });
 
-  it("requires 35 meals across 7 days x 5 slots and web search with sourceUrl", () => {
+  it("enumerates all enabled day/slot pairs (35 when the full week is enabled) with web search + sourceUrl", () => {
+    // full default schedule = 35 cells
     expect(prompt).toContain("35");
-    expect(prompt).toContain("7");
+    // per-day enumeration with day names and indices
+    expect(prompt).toContain("Monday (day 0)");
+    expect(prompt).toContain("Sunday (day 6)");
+    // each day lists all five slots
+    expect(prompt).toContain("breakfast, morning_snack, lunch, afternoon_snack, dinner");
     expect(prompt.toLowerCase()).toContain("web search");
     expect(prompt).toContain("sourceUrl");
-    // day range 0-6
-    expect(prompt).toContain("0");
-    expect(prompt).toContain("6");
+  });
+
+  it("lists ONLY the enabled cells, omitting disabled slots and counting them", () => {
+    const subsetPrompt = buildCurationPrompt({
+      ...input,
+      enabledSlots: [
+        { day: 0, slot: "lunch" },
+        { day: 0, slot: "dinner" },
+        { day: 1, slot: "dinner" },
+      ],
+    });
+    // count reflects the enabled cells, not a fixed 35
+    expect(subsetPrompt).toContain("3 meals");
+    expect(subsetPrompt).not.toContain("35 meals");
+    // exact per-day lines: Monday omits its disabled breakfast/snacks
+    expect(subsetPrompt).toContain("Monday (day 0): lunch, dinner");
+    expect(subsetPrompt).toContain("Tuesday (day 1): dinner");
+    // no enumeration line for days with no enabled cells
+    expect(subsetPrompt).not.toContain("(day 2)");
+    expect(subsetPrompt).not.toContain("Wednesday (day 2)");
   });
 
   it("names both snack slots and describes two simple no-cook snacks per day", () => {

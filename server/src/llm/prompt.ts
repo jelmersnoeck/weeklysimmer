@@ -1,4 +1,11 @@
-import type { Settings, Meal, Slot, ProteinClass } from "../domain/types.js";
+import type {
+  Settings,
+  Meal,
+  Slot,
+  ProteinClass,
+  EnabledSlot,
+} from "../domain/types.js";
+import { SLOTS } from "../domain/schedule.js";
 
 const PROTEIN_CLASS_WORDS: Record<ProteinClass, string> = {
   lean: "lean protein",
@@ -22,6 +29,26 @@ export interface CurationPromptInput {
   onHand: string[];
   note: string;
   avoid: string[];
+  enabledSlots: EnabledSlot[];
+}
+
+/**
+ * Render the enabled (day, slot) cells as a readable per-day list, e.g.
+ *   - Monday (day 0): breakfast, lunch, dinner
+ * Days with no enabled slots are omitted entirely.
+ */
+function formatEnabledSlots(enabledSlots: EnabledSlot[]): string {
+  const lines: string[] = [];
+  for (let day = 0; day < 7; day++) {
+    const slots = SLOTS.filter((slot) =>
+      enabledSlots.some((e) => e.day === day && e.slot === slot),
+    );
+    if (slots.length > 0) {
+      const dayName = DAY_NAMES[day] ?? `day ${day}`;
+      lines.push(`- ${dayName} (day ${day}): ${slots.join(", ")}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -32,8 +59,9 @@ export interface CurationPromptInput {
  * code scales portions and builds the shopping list afterwards.
  */
 export function buildCurationPrompt(input: CurationPromptInput): string {
-  const { settings, weekStart, onHand, note, avoid } = input;
+  const { settings, weekStart, onHand, note, avoid, enabledSlots } = input;
 
+  const enabledList = formatEnabledSlots(enabledSlots);
   const onHandList = onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
   const restrictions =
     settings.restrictions.length > 0 ? settings.restrictions.join(", ") : "(none)";
@@ -97,9 +125,10 @@ person's serving (the app scales portions, so this is per one serving, not the w
 ${avoidRepeat}
 Do not repeat any meal listed above.
 
-## Output requirements
-- Produce a FULL week: 7 days (day 0 = Monday through day 6 = Sunday) x 5 slots
-  (breakfast, morning_snack, lunch, afternoon_snack, dinner) = 35 meals total.
+## Output requirements — generate EXACTLY these meals
+Generate EXACTLY the following ${enabledSlots.length} meals (day 0 = Monday through
+day 6 = Sunday) and NO others — do not add meals for any day/slot not listed here:
+${enabledList}
 - Use the web search tool to find REAL recipes, and return a "sourceUrl" for each meal
   where possible (the URL of the recipe you based it on).
 - Ingredient quantities are PER SINGLE SERVING (the app scales them for the household).

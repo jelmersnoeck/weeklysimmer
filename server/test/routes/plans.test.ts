@@ -6,6 +6,7 @@ import { seedSettings } from "../../src/db/seed.js";
 import { createApp } from "../../src/app.js";
 import type {
   PlanCurator,
+  CuratorInput,
   RegenerateMealInput,
 } from "../../src/llm/anthropicClient.js";
 import type { RawPlan, RawMeal } from "../../src/llm/planSchema.js";
@@ -72,9 +73,13 @@ const replacementMeal: RawMeal = {
   leftoverOf: null,
 };
 
-function fakeCurator(regenCalls: RegenerateMealInput[]): PlanCurator {
+function fakeCurator(
+  regenCalls: RegenerateMealInput[],
+  curateCalls: CuratorInput[],
+): PlanCurator {
   return {
-    async curate() {
+    async curate(input) {
+      curateCalls.push(input);
       return cannedPlan;
     },
     async regenerateMeal(input) {
@@ -88,12 +93,14 @@ function makeApp(): {
   app: ReturnType<typeof createApp>;
   db: Database.Database;
   regenCalls: RegenerateMealInput[];
+  curateCalls: CuratorInput[];
 } {
   const db = openDb(":memory:");
   seedSettings(db);
   const regenCalls: RegenerateMealInput[] = [];
-  const app = createApp(db, { curator: fakeCurator(regenCalls) });
-  return { app, db, regenCalls };
+  const curateCalls: CuratorInput[] = [];
+  const app = createApp(db, { curator: fakeCurator(regenCalls, curateCalls) });
+  return { app, db, regenCalls, curateCalls };
 }
 
 const generateBody = {
@@ -159,6 +166,49 @@ describe("POST /api/plans/generate", () => {
       .send({ weekStart: "2026-07-13", onHand: ["carrots", 42] });
     expect(res.status).toBe(400);
     expect(res.body.error).toBeTruthy();
+    db.close();
+  });
+
+  it("derives enabledSlots from the settings default (all 35) when omitted", async () => {
+    const { app, db, curateCalls } = makeApp();
+    await request(app).post("/api/plans/generate").send(generateBody);
+    expect(curateCalls).toHaveLength(1);
+    // seeded mealSchedule is all-true => 5 slots x 7 days = 35 cells
+    expect(curateCalls[0].enabledSlots).toHaveLength(35);
+    expect(curateCalls[0].enabledSlots).toContainEqual({ day: 0, slot: "breakfast" });
+    expect(curateCalls[0].enabledSlots).toContainEqual({ day: 6, slot: "dinner" });
+    db.close();
+  });
+
+  it("passes a provided enabledSlots subset through to the curator", async () => {
+    const { app, db, curateCalls } = makeApp();
+    const enabledSlots = [
+      { day: 0, slot: "dinner" },
+      { day: 2, slot: "lunch" },
+    ];
+    await request(app)
+      .post("/api/plans/generate")
+      .send({ ...generateBody, enabledSlots });
+    expect(curateCalls[0].enabledSlots).toEqual(enabledSlots);
+    db.close();
+  });
+
+  it("returns 400 when an enabledSlots entry has an out-of-range day", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post("/api/plans/generate")
+      .send({ ...generateBody, enabledSlots: [{ day: 7, slot: "dinner" }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+    db.close();
+  });
+
+  it("returns 400 when an enabledSlots entry has an invalid slot", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post("/api/plans/generate")
+      .send({ ...generateBody, enabledSlots: [{ day: 0, slot: "brunch" }] });
+    expect(res.status).toBe(400);
     db.close();
   });
 });

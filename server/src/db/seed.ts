@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import type { Settings } from "../domain/types.js";
+import { defaultMealSchedule } from "../domain/schedule.js";
 
 const DEFAULT_SETTINGS: Settings = {
   members: [
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
     broccoli: { quantity: 1, unit: "piece" },
     tomato: { quantity: 400, unit: "g" },
   },
+  mealSchedule: defaultMealSchedule(),
 };
 
 export function seedSettings(db: Database.Database): void {
@@ -35,5 +37,11 @@ export function getSettings(db: Database.Database): Settings {
   if (!row) {
     throw new Error("settings not seeded");
   }
-  return JSON.parse(row.data) as Settings;
+  const settings = JSON.parse(row.data) as Settings;
+  // Old seeded rows predate mealSchedule; default them to all-true so no settings
+  // migration is needed.
+  if (!settings.mealSchedule) {
+    settings.mealSchedule = defaultMealSchedule();
+  }
+  return settings;
 }
