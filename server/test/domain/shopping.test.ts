@@ -56,6 +56,18 @@ describe("buildShoppingList", () => {
     expect(list).toHaveLength(2);
   });
 
+  it("merges singular and plural spellings of the same ingredient", () => {
+    const meals = [
+      meal([{ name: "egg", quantity: 2, unit: "piece", category: "dairy" }]),
+      meal([{ name: "eggs", quantity: 3, unit: "piece", category: "dairy" }]),
+    ];
+    const list = buildShoppingList(meals);
+    expect(list).toHaveLength(1);
+    expect(list[0].totalQuantity).toBe(5);
+    // first-seen display name is kept
+    expect(list[0].name).toBe("egg");
+  });
+
   it("is case-insensitive on ingredient name", () => {
     const meals = [
       meal([{ name: "Rice", quantity: 100, unit: "g", category: "grains" }]),

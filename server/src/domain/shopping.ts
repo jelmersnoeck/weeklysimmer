@@ -1,6 +1,7 @@
 import type { Meal, ShoppingItem } from "./types.js";
 import { toBaseUnit, baseUnit } from "./units.js";
 import { canonicalCategory } from "./categories.js";
+import { singularize } from "./text.js";
 
 /**
  * Aggregate every ingredient across all meals into one shopping list.
@@ -42,7 +43,9 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
     // not add to the shopping list — otherwise the reused protein/veg is bought twice.
     if (m.leftoverOf) continue;
     for (const ing of m.ingredients) {
-      const nameLower = ing.name.trim().toLowerCase();
+      // Merge on the SINGULARIZED name so "egg"/"eggs" and "carrot"/"carrots" fold
+      // into one line; the first-seen display name is kept below.
+      const nameLower = singularize(ing.name.trim().toLowerCase());
       const converted = toBaseUnit(ing.quantity, ing.unit);
 
       let key: string;
