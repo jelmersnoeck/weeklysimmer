@@ -40,7 +40,9 @@ describe("preference option lists", () => {
     expect(APPETITES).toEqual(["light", "standard", "hearty", "very_active"]);
     expect(MEMBER_TYPES).toEqual(["adult", "child", "toddler", "baby"]);
     expect(DIETS).toContain("low_fodmap");
-    expect(DIETS).toContain("none");
+    expect(DIETS).not.toContain("none");
+    expect(DIETS).not.toContain("dairy_free");
+    expect(AVOIDS).toContain("lactose");
     expect(CUISINES).toContain("mediterranean");
     expect(DISH_TYPES).toContain("stir_fry");
     expect(FLAVOURS).toContain("umami");
@@ -95,7 +97,7 @@ describe("defaultSettings", () => {
   });
 
   it("sets the default diet, avoid and liked lists", () => {
-    expect(s.diet).toBe("low_fodmap");
+    expect(s.diets).toEqual(["low_fodmap"]);
     expect(s.avoid).toEqual(["spicy"]);
     expect(s.cuisinesLiked).toContain("mediterranean");
     expect(s.dishTypesLiked).toContain("stir_fry");

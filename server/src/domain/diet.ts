@@ -1,4 +1,4 @@
-import type { Settings } from "./types.js";
+import type { Diet, Settings } from "./types.js";
 
 /**
  * A non-blocking warning that a selected preference clashes with the chosen diet.
@@ -38,18 +38,15 @@ function selectedProteins(settings: Settings): string[] {
   return settings.proteins.filter((p) => p.frequency !== "never").map((p) => p.key);
 }
 
-/**
- * Compute non-blocking diet warnings for a settings profile. Each rule checks the
- * user's concrete selections (selected proteins, liked flavours/dish types) against
- * the chosen diet and returns a friendly message. `none` yields no conflicts.
- */
-export function dietConflicts(settings: Settings): DietConflict[] {
+/** Conflicts for a SINGLE diet framework, given the household's concrete selections. */
+function conflictsForDiet(
+  diet: Diet,
+  selected: string[],
+  likes: Set<string>,
+): DietConflict[] {
   const conflicts: DietConflict[] = [];
-  const selected = selectedProteins(settings);
-  const likes = new Set(settings.flavoursLiked);
-  const dishes = new Set(settings.dishTypesLiked);
 
-  switch (settings.diet) {
+  switch (diet) {
     case "vegetarian": {
       for (const key of selected) {
         if (MEAT_AND_FISH.has(key)) {
@@ -110,55 +107,29 @@ export function dietConflicts(settings: Settings): DietConflict[] {
       }
       break;
     }
-    case "gluten_free": {
-      if (dishes.has("pasta")) {
-        conflicts.push({
-          field: "dishTypes",
-          key: "pasta",
-          message: "pasta usually contains gluten",
-        });
-      }
-      if (dishes.has("wraps_tacos")) {
-        conflicts.push({
-          field: "dishTypes",
-          key: "wraps_tacos",
-          message: "wraps/tacos usually contain gluten",
-        });
-      }
-      break;
-    }
-    case "dairy_free": {
-      if (likes.has("cheesy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "cheesy",
-          message: "cheese isn't dairy-free",
-        });
-      }
-      if (likes.has("creamy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "creamy",
-          message: "creamy dishes often use dairy",
-        });
-      }
-      break;
-    }
-    case "lactose_free": {
-      // Hard cheeses/butter are low-lactose, so "cheesy" is fine; milk/cream are high.
-      if (likes.has("creamy")) {
-        conflicts.push({
-          field: "flavours",
-          key: "creamy",
-          message: "creamy dishes are often high in lactose",
-        });
-      }
-      break;
-    }
-    case "none":
-    default:
-      break;
   }
 
   return conflicts;
+}
+
+/**
+ * Compute non-blocking diet warnings for a settings profile. Each selected diet
+ * framework contributes its own conflicts (checked against the user's concrete
+ * selections); the results are UNIONED across all `settings.diets` and deduped by
+ * (field, key) so a key flagged by two diets only appears once. An empty `diets`
+ * array (no framework) yields no conflicts.
+ */
+export function dietConflicts(settings: Settings): DietConflict[] {
+  const selected = selectedProteins(settings);
+  const likes = new Set(settings.flavoursLiked);
+
+  const merged = new Map<string, DietConflict>();
+  for (const diet of settings.diets) {
+    for (const c of conflictsForDiet(diet, selected, likes)) {
+      const dedupeKey = `${c.field}|${c.key}`;
+      if (!merged.has(dedupeKey)) merged.set(dedupeKey, c);
+    }
+  }
+
+  return [...merged.values()];
 }

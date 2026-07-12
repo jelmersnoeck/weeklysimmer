@@ -46,15 +46,7 @@ export interface Meal {
 export type Frequency = "never" | "occasionally" | "weekly" | "often";
 export type Appetite = "light" | "standard" | "hearty" | "very_active";
 export type MemberType = "adult" | "child" | "toddler" | "baby";
-export type Diet =
-  | "none"
-  | "vegetarian"
-  | "vegan"
-  | "pescatarian"
-  | "low_fodmap"
-  | "gluten_free"
-  | "dairy_free"
-  | "lactose_free";
+export type Diet = "vegetarian" | "vegan" | "pescatarian" | "low_fodmap";
 
 /** One person in the household. Appetite + type drive the portion factor. */
 export interface HouseholdMember {
@@ -85,7 +77,7 @@ export interface Settings {
   dishTypesLiked: string[];
   flavoursLiked: string[];
   avoid: string[];
-  diet: Diet;
+  diets: Diet[];
   effort: Difficulty;
   mealSchedule: MealSchedule;
 }

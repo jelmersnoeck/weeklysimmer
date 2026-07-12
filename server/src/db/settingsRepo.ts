@@ -1,13 +1,15 @@
 import type Database from "better-sqlite3";
-import type { Settings } from "../domain/types.js";
-import { defaultSettings } from "../domain/preferences.js";
+import type { Diet, Settings } from "../domain/types.js";
+import { DIETS, defaultSettings } from "../domain/preferences.js";
 
 /**
- * Does the parsed blob look like a saved v2 profile? Old rows (pre-v2) and
- * anything the user never explicitly saved lack `configured === true`, so they
- * read back as the (unconfigured) default profile — no DB migration needed.
+ * Does the parsed blob have the shared v2 backbone (configured + household +
+ * proteins + mealSchedule)? Old rows (pre-v2) and anything the user never
+ * explicitly saved lack `configured === true`, so they read back as the
+ * (unconfigured) default profile — no DB migration needed. The diet shape is
+ * checked separately so we can migrate an old single-`diet` row to `diets`.
  */
-function isConfiguredV2(value: unknown): value is Settings {
+function isV2Backbone(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
@@ -23,6 +25,10 @@ function isConfiguredV2(value: unknown): value is Settings {
  * Read household settings. Returns a synthesized default profile (configured:false)
  * when there is no row, an old-shape row, or an unconfigured blob — so the app always
  * has settings to show, but generation stays gated until the user saves their own.
+ *
+ * A v2 row that predates multi-select diets stores a single `diet` string instead of
+ * a `diets` array; we coerce it to `diets: [diet]` filtered to the current enum
+ * (dropping removed values like `dairy_free`, which are now avoid concerns).
  */
 export function getSettings(db: Database.Database): Settings {
   const row = db.prepare("SELECT data FROM settings WHERE id = 1").get() as
@@ -36,8 +42,19 @@ export function getSettings(db: Database.Database): Settings {
   } catch {
     return defaultSettings();
   }
-  if (!isConfiguredV2(parsed)) return defaultSettings();
-  return parsed;
+  if (!isV2Backbone(parsed)) return defaultSettings();
+
+  // Already the new (multi-select) shape — return verbatim.
+  if (Array.isArray(parsed.diets)) return parsed as unknown as Settings;
+
+  // Old single-`diet` row: migrate to `diets`, dropping any value not in the new enum.
+  if (typeof parsed.diet === "string") {
+    const { diet, ...rest } = parsed;
+    const diets = DIETS.includes(diet as Diet) ? [diet as Diet] : [];
+    return { ...(rest as unknown as Settings), diets };
+  }
+
+  return defaultSettings();
 }
 
 /**

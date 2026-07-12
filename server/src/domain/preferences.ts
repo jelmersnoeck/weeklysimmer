@@ -89,6 +89,7 @@ export const FLAVOURS = [
 
 export const AVOIDS = [
   "dairy",
+  "lactose",
   "gluten",
   "spicy",
   "shellfish",
@@ -103,14 +104,10 @@ export const AVOIDS = [
 ] as const;
 
 export const DIETS = [
-  "none",
   "vegetarian",
   "vegan",
   "pescatarian",
   "low_fodmap",
-  "gluten_free",
-  "dairy_free",
-  "lactose_free",
 ] as const;
 
 export const VEGETABLES = [
@@ -207,7 +204,7 @@ export function defaultSettings(): Settings {
     dishTypesLiked: ["stir_fry", "bakes", "grain_bowl", "soup", "roast", "tray_bake", "salad"],
     flavoursLiked: ["savoury", "herby", "umami", "creamy"],
     avoid: ["spicy"],
-    diet: "low_fodmap",
+    diets: ["low_fodmap"],
     effort: "easy",
     mealSchedule: defaultMealSchedule(),
   };

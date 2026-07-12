@@ -39,11 +39,36 @@ describe("getSettings", () => {
 
   it("returns a saved v2 profile verbatim", () => {
     const db = openDb(":memory:");
-    const saved = saveSettings(db, makeSettings({ diet: "vegetarian" }));
+    const saved = saveSettings(db, makeSettings({ diets: ["vegetarian"] }));
     const settings = getSettings(db);
     expect(settings.configured).toBe(true);
-    expect(settings.diet).toBe("vegetarian");
+    expect(settings.diets).toEqual(["vegetarian"]);
     expect(settings).toEqual(saved);
+    db.close();
+  });
+
+  it("migrates an old single-`diet` v2 row to the `diets` array", () => {
+    const db = openDb(":memory:");
+    const { diets, ...rest } = makeSettings();
+    db.prepare("INSERT OR REPLACE INTO settings (id, data) VALUES (1, ?)").run(
+      JSON.stringify({ ...rest, diet: "vegetarian" }),
+    );
+    const settings = getSettings(db);
+    expect(settings.configured).toBe(true);
+    expect(settings.diets).toEqual(["vegetarian"]);
+    expect((settings as unknown as { diet?: unknown }).diet).toBeUndefined();
+    db.close();
+  });
+
+  it("drops a removed diet value when migrating an old `diet` row", () => {
+    const db = openDb(":memory:");
+    const { diets, ...rest } = makeSettings();
+    db.prepare("INSERT OR REPLACE INTO settings (id, data) VALUES (1, ?)").run(
+      JSON.stringify({ ...rest, diet: "dairy_free" }),
+    );
+    const settings = getSettings(db);
+    // dairy_free is no longer a diet (it's an avoid concern), so it drops to no framework
+    expect(settings.diets).toEqual([]);
     db.close();
   });
 });

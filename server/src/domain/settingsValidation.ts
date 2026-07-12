@@ -119,8 +119,11 @@ export function validateSettings(body: unknown): ValidationResult {
     }
   }
 
-  if (!DIETS.includes(b.diet as Diet)) {
-    return { ok: false, error: "diet must be a valid diet" };
+  if (
+    !Array.isArray(b.diets) ||
+    !b.diets.every((d) => DIETS.includes(d as Diet))
+  ) {
+    return { ok: false, error: "diets must be an array of valid diets" };
   }
   if (!EFFORTS.includes(b.effort as Difficulty)) {
     return { ok: false, error: "effort must be easy, medium or hard" };
@@ -146,7 +149,7 @@ export function validateSettings(body: unknown): ValidationResult {
       dishTypesLiked: b.dishTypesLiked as string[],
       flavoursLiked: b.flavoursLiked as string[],
       avoid: b.avoid as string[],
-      diet: b.diet as Diet,
+      diets: b.diets as Diet[],
       effort: b.effort as Difficulty,
       mealSchedule,
     },

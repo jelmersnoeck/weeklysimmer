@@ -7,9 +7,9 @@ const proteins = (sel: Record<string, Frequency>) =>
   Object.entries(sel).map(([key, frequency]) => ({ key, frequency }));
 
 describe("dietConflicts", () => {
-  it("returns no conflicts for diet 'none'", () => {
+  it("returns no conflicts when no diet framework is selected", () => {
     const s = makeSettings({
-      diet: "none",
+      diets: [],
       proteins: proteins({ chicken: "often", beef: "weekly" }),
       flavoursLiked: ["cheesy", "garlicky", "creamy"],
       dishTypesLiked: ["pasta", "wraps_tacos"],
@@ -19,7 +19,7 @@ describe("dietConflicts", () => {
 
   it("only treats proteins with frequency !== never as selected", () => {
     const s = makeSettings({
-      diet: "vegetarian",
+      diets: ["vegetarian"],
       proteins: proteins({ chicken: "never", tofu: "weekly" }),
     });
     expect(dietConflicts(s)).toEqual([]);
@@ -28,7 +28,7 @@ describe("dietConflicts", () => {
   describe("vegetarian", () => {
     it("flags selected meat/fish proteins", () => {
       const s = makeSettings({
-        diet: "vegetarian",
+        diets: ["vegetarian"],
         proteins: proteins({ chicken: "often", tofu: "weekly", salmon: "never" }),
       });
       const c = dietConflicts(s);
@@ -42,7 +42,7 @@ describe("dietConflicts", () => {
   describe("vegan", () => {
     it("flags meat, eggs, halloumi/paneer and liked cheese", () => {
       const s = makeSettings({
-        diet: "vegan",
+        diets: ["vegan"],
         proteins: proteins({
           chicken: "weekly",
           eggs: "weekly",
@@ -66,7 +66,7 @@ describe("dietConflicts", () => {
   describe("pescatarian", () => {
     it("flags meat but allows fish and shellfish", () => {
       const s = makeSettings({
-        diet: "pescatarian",
+        diets: ["pescatarian"],
         proteins: proteins({
           chicken: "often",
           beef: "occasionally",
@@ -84,7 +84,7 @@ describe("dietConflicts", () => {
   describe("low_fodmap", () => {
     it("flags beans and liked garlic", () => {
       const s = makeSettings({
-        diet: "low_fodmap",
+        diets: ["low_fodmap"],
         proteins: proteins({ beans_legumes: "weekly", chicken: "often" }),
         flavoursLiked: ["garlicky", "savoury"],
       });
@@ -100,50 +100,27 @@ describe("dietConflicts", () => {
     });
   });
 
-  describe("gluten_free", () => {
-    it("flags pasta and wraps/tacos dish types", () => {
+  describe("multiple diets", () => {
+    it("unions conflicts across every selected diet", () => {
       const s = makeSettings({
-        diet: "gluten_free",
-        dishTypesLiked: ["pasta", "wraps_tacos", "salad"],
+        diets: ["vegan", "low_fodmap"],
+        proteins: proteins({ chicken: "often", beans_legumes: "weekly", tofu: "often" }),
+        flavoursLiked: ["garlicky", "savoury"],
       });
       const c = dietConflicts(s);
       const keys = c.map((x) => x.key).sort();
-      expect(keys).toEqual(["pasta", "wraps_tacos"]);
-      expect(c.every((x) => x.field === "dishTypes")).toBe(true);
-      expect(c.find((x) => x.key === "pasta")!.message.toLowerCase()).toContain(
-        "gluten",
-      );
+      // chicken from vegan; beans_legumes + garlicky from low_fodmap
+      expect(keys).toEqual(["beans_legumes", "chicken", "garlicky"]);
     });
-  });
 
-  describe("dairy_free", () => {
-    it("flags cheesy and creamy flavours", () => {
+    it("dedupes a key flagged by more than one diet", () => {
       const s = makeSettings({
-        diet: "dairy_free",
-        flavoursLiked: ["cheesy", "creamy", "savoury"],
+        diets: ["vegetarian", "vegan"],
+        proteins: proteins({ chicken: "often" }),
       });
       const c = dietConflicts(s);
-      const keys = c.map((x) => x.key).sort();
-      expect(keys).toEqual(["cheesy", "creamy"]);
-      expect(c.every((x) => x.field === "flavours")).toBe(true);
-      expect(c.find((x) => x.key === "cheesy")!.message.toLowerCase()).toContain(
-        "dairy-free",
-      );
-      expect(c.find((x) => x.key === "creamy")!.message.toLowerCase()).toContain(
-        "dairy",
-      );
-    });
-  });
-
-  describe("lactose_free", () => {
-    it("flags creamy but NOT cheesy (hard cheese is low-lactose)", () => {
-      const s = makeSettings({
-        diet: "lactose_free",
-        flavoursLiked: ["cheesy", "creamy", "savoury"],
-      });
-      const c = dietConflicts(s);
-      expect(c.map((x) => x.key)).toEqual(["creamy"]);
-      expect(c[0].message.toLowerCase()).toContain("lactose");
+      // both vegetarian and vegan flag chicken; only one entry survives
+      expect(c.filter((x) => x.key === "chicken")).toHaveLength(1);
     });
   });
 });

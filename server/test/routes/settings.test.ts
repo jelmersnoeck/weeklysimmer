@@ -81,7 +81,7 @@ describe("PUT /api/settings", () => {
   it("returns diet conflicts for clashing selections", async () => {
     const { app: a, db } = app();
     const body = makeSettings({
-      diet: "vegan",
+      diets: ["vegan"],
       proteins: [{ key: "chicken", frequency: "often" }],
       flavoursLiked: ["cheesy"],
     });
@@ -138,7 +138,16 @@ describe("PUT /api/settings", () => {
     const { app: a, db } = app();
     const res = await request(a)
       .put("/api/settings")
-      .send(makeSettings({ diet: "carnivore" as never }));
+      .send(makeSettings({ diets: ["carnivore"] as never }));
+    expect(res.status).toBe(400);
+    db.close();
+  });
+
+  it("returns 400 when diets is not an array", async () => {
+    const { app: a, db } = app();
+    const res = await request(a)
+      .put("/api/settings")
+      .send(makeSettings({ diets: "vegan" as never }));
     expect(res.status).toBe(400);
     db.close();
   });

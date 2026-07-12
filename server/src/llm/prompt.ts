@@ -62,6 +62,15 @@ function formatEnabledSlots(enabledSlots: EnabledSlot[]): string {
   return lines.join("\n");
 }
 
+/**
+ * A one-line diet guide for the household's selected frameworks, or "" when none is
+ * selected (so the caller can omit the diet line entirely).
+ */
+function dietGuidance(settings: Settings): string {
+  if (settings.diets.length === 0) return "";
+  return `Follow these dietary frameworks: ${settings.diets.join(", ")} (explicit protein/taste selections still take precedence).`;
+}
+
 /** Describe the household's protein preferences weighted by frequency. */
 function proteinProfile(settings: Settings): string {
   const byFreq = (f: string): string[] =>
@@ -95,6 +104,13 @@ export function buildCurationPrompt(input: CurationPromptInput): string {
   const avoidRepeat =
     avoid.length > 0 ? avoid.map((m) => `- ${m}`).join("\n") : "- (nothing yet)";
   const servings = householdServings(settings.household);
+  const dietSection =
+    settings.diets.length > 0
+      ? `\n## Diet
+${dietGuidance(settings)}
+Use these frameworks as a general guide for the week, but honour the user's concrete
+protein and taste choices first whenever they conflict with a diet label.\n`
+      : "";
 
   return `You are a meal-prep planner for a family household. Plan one week of meals.
 Week starting (Monday): ${weekStart}
@@ -125,12 +141,7 @@ Lean toward these preferences, but keep the week varied.
 ## Hard excludes (STRICT — always EXCLUDE)
 Never use anything the household avoids: ${orNone(settings.avoid)}.
 Treat these as strict allergen/dislike excludes — no meal may contain them.
-
-## Diet
-Follow a "${settings.diet}" diet as a general guide for the week. HOWEVER, the explicit
-protein and taste selections above take PRECEDENCE over the diet label whenever they
-conflict — honour the user's concrete choices first.
-
+${dietSection}
 ## Household portions & effort
 Cook for ${servings} servings per meal (the app scales ingredient quantities; still,
 plan realistic family-sized meals). Keep effort "${settings.effort}".
@@ -204,6 +215,7 @@ export function buildRegeneratePrompt(input: RegeneratePromptInput): string {
     otherMeals.length > 0
       ? otherMeals.map((m) => `- ${m.title}`).join("\n")
       : "- (none)";
+  const dietLine = settings.diets.length > 0 ? `\n${dietGuidance(settings)}` : "";
 
   return `You are a meal-prep planner for a family household. Replace ONE meal in an
 existing weekly plan and return it as a single structured meal.
@@ -217,9 +229,7 @@ The household already has these foods to use up: ${onHandList}. Prefer a recipe 
 helps use up these foods so nothing goes to waste.
 
 ## Hard excludes (STRICT — always EXCLUDE)
-Never use anything the household avoids: ${orNone(settings.avoid)}.
-Follow a "${settings.diet}" diet as a general guide, but the household's explicit protein
-and taste selections take precedence over the diet label when they conflict.
+Never use anything the household avoids: ${orNone(settings.avoid)}.${dietLine}
 Cuisines they enjoy: ${orNone(settings.cuisinesLiked)}. Flavours they enjoy: ${orNone(settings.flavoursLiked)}.
 
 ## Protein class (STRICT — keep the week's balance)
