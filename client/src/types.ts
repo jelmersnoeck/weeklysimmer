@@ -76,6 +76,8 @@ export interface PlanSummary {
   note: string;
   status: PlanStatus;
   createdAt: string;
+  // Optional: the backend may include an average rating for the week.
+  avgRating?: number | null;
 }
 
 export interface GeneratePlanInput {
