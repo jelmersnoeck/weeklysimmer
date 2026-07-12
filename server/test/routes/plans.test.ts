@@ -148,6 +148,24 @@ const generateBody = {
   avoid: ["Tuna pasta bake"],
 };
 
+describe("POST /api/plans/generate (onboarding guard)", () => {
+  it("returns 409 and creates no job when settings are unconfigured", async () => {
+    // an app whose DB has NO saved settings -> getSettings() is unconfigured
+    const db = openDb(":memory:");
+    const store = createJobStore();
+    const app = createApp(db, {
+      curator: fakeCurator([], []),
+      store,
+    });
+
+    const res = await request(app).post("/api/plans/generate").send(generateBody);
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain("Configure your preferences");
+    expect(store.listJobs()).toHaveLength(0);
+    db.close();
+  });
+});
+
 describe("POST /api/plans/generate", () => {
   it("returns 202 + jobId and does not persist synchronously", async () => {
     const { app, db } = makeApp();

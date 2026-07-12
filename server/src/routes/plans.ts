@@ -64,6 +64,15 @@ export function plansRouter(
   // curation/persistence runs asynchronously so the client isn't held for
   // minutes. Returns 202 with the job id to poll via GET /api/jobs/:id.
   router.post("/plans/generate", (req, res) => {
+    // Onboarding guard: refuse to plan a week until the user has configured their
+    // preferences (the frontend also gates this, but enforce it server-side too).
+    if (getSettings(db).configured === false) {
+      throw new HttpError(
+        409,
+        "Configure your preferences before planning a week.",
+      );
+    }
+
     const { weekStart, onHand, note, avoid, enabledSlots } = req.body ?? {};
     if (typeof weekStart !== "string" || weekStart.length === 0) {
       throw new HttpError(400, "weekStart must be a non-empty string");
