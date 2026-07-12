@@ -1,0 +1,189 @@
+.generating {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6);
+}
+
+/* A gently simmering pot with rising steam. */
+.generating__pot {
+  position: relative;
+  width: 96px;
+  height: 88px;
+}
+
+.generating__pot-body {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88px;
+  height: 46px;
+  background: var(--herb);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: inset 0 3px 0 rgba(251, 250, 246, 0.18);
+}
+
+/* The pot's lip. */
+.generating__pot-body::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  right: -6px;
+  height: 10px;
+  background: var(--herb);
+  border-radius: var(--radius-pill);
+}
+
+/* The squash-colored contents just under the lip. */
+.generating__pot-body::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 6px;
+  right: 6px;
+  height: 6px;
+  background: var(--squash);
+  border-radius: var(--radius-pill);
+}
+
+.generating__steam {
+  position: absolute;
+  bottom: 42px;
+  width: 8px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to top,
+    rgba(63, 107, 76, 0),
+    rgba(63, 107, 76, 0.45)
+  );
+  opacity: 0;
+  transform-origin: bottom center;
+  animation: generating-steam 2.8s ease-in-out infinite;
+}
+
+.generating__steam--a {
+  left: 32px;
+  animation-delay: 0s;
+}
+
+.generating__steam--b {
+  left: 44px;
+  height: 32px;
+  animation-delay: 0.6s;
+}
+
+.generating__steam--c {
+  left: 56px;
+  animation-delay: 1.2s;
+}
+
+@keyframes generating-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scaleY(0.6);
+  }
+  35% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scaleY(1.15);
+  }
+}
+
+.generating__title {
+  font-size: 1.5rem;
+  color: var(--ink);
+}
+
+.generating__message {
+  margin: 0;
+  color: var(--ink-60);
+  min-height: 1.5em;
+  animation: generating-fade 400ms ease;
+}
+
+@keyframes generating-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.generating__elapsed {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--herb);
+  letter-spacing: 0.04em;
+}
+
+/* A slow progress shimmer — indeterminate, since we can't measure progress. */
+.generating__shimmer {
+  width: min(20rem, 100%);
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--sage);
+  overflow: hidden;
+  position: relative;
+}
+
+.generating__shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    rgba(63, 107, 76, 0),
+    var(--herb),
+    var(--squash),
+    rgba(63, 107, 76, 0)
+  );
+  animation: generating-slide 1.8s ease-in-out infinite;
+}
+
+@keyframes generating-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.generating__note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-40);
+}
+
+/* Respect reduced motion: keep the static pot, message and timer; drop motion
+   and show the shimmer as a calm, full static bar. */
+@media (prefers-reduced-motion: reduce) {
+  .generating__steam {
+    display: none;
+  }
+
+  .generating__message {
+    animation: none;
+  }
+
+  .generating__shimmer::after {
+    animation: none;
+    width: 100%;
+    transform: none;
+    opacity: 0.5;
+  }
+}
