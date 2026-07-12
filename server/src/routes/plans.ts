@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type Database from "better-sqlite3";
-import { getSettings } from "../db/seed.js";
+import { getSettings } from "../db/settingsRepo.js";
 import {
   savePlan,
   getPlan,
@@ -184,7 +184,7 @@ export function plansRouter(
       otherMeals: plan.meals.filter((m) => m.id !== mealId),
     });
 
-    const servings = householdServings(settings.members);
+    const servings = householdServings(settings.household);
     updateMeal(db, mealId, scaleRawMeal(rawMeal, servings));
 
     const updated = getPlan(db, id)!;

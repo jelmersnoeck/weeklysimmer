@@ -43,16 +43,50 @@ export interface Meal {
   rating?: number | null; // 1-5
 }
 
-export interface HouseholdMember { label: string; consumptionFactor: number; }
+export type Frequency = "never" | "occasionally" | "weekly" | "often";
+export type Appetite = "light" | "standard" | "hearty" | "very_active";
+export type MemberType = "adult" | "child";
+export type Diet =
+  | "none"
+  | "vegetarian"
+  | "vegan"
+  | "pescatarian"
+  | "low_fodmap"
+  | "gluten_free"
+  | "dairy_free";
 
+/** One person in the household. Appetite + type drive the portion factor. */
+export interface HouseholdMember {
+  id: string;
+  name?: string;
+  type: MemberType;
+  appetite: Appetite;
+}
+
+/** A protein and how often the household wants it. `never` excludes it. */
+export interface ProteinPref {
+  key: string;
+  frequency: Frequency;
+}
+
+/**
+ * Configurable household preferences ("Settings v2"). `configured` gates plan
+ * generation: a freshly-synthesized default profile is `configured: false` until
+ * the user saves their own via PUT /api/settings.
+ */
 export interface Settings {
-  members: HouseholdMember[];
-  restrictions: string[];       // ["no_spicy","low_fodmap"]
-  avoidIngredients: string[];   // ["beans","lentils",...]
-  proteinCadence: { veg_per_week: number; red_or_high_fat_per_week: number };
+  configured: boolean;
+  household: HouseholdMember[];
+  proteins: ProteinPref[];
+  vegetablesLiked: string[];
+  fruitsLiked: string[];
+  cuisinesLiked: string[];
+  dishTypesLiked: string[];
+  flavoursLiked: string[];
+  avoid: string[];
+  diet: Diet;
   effort: Difficulty;
-  defaultVegQuantities: Record<string, { quantity: number; unit: string }>;
-  mealSchedule: MealSchedule;   // which day/slot cells the user wants meals for
+  mealSchedule: MealSchedule;
 }
 
 export interface WeeklyPlan {

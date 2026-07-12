@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type Database from "better-sqlite3";
 import { openDb } from "../../src/db/index.js";
-import { seedSettings } from "../../src/db/seed.js";
+import { saveSettings } from "../../src/db/settingsRepo.js";
+import { makeSettings } from "../helpers/settings.js";
 import { createJobStore } from "../../src/jobs/registry.js";
 import { enqueueGeneration } from "../../src/jobs/generation.js";
 import { getPlan } from "../../src/db/plansRepo.js";
@@ -67,7 +68,7 @@ describe("enqueueGeneration", () => {
 
   beforeEach(() => {
     db = openDb(":memory:");
-    seedSettings(db);
+    saveSettings(db, makeSettings());
   });
 
   afterEach(() => {

@@ -4,21 +4,10 @@ import {
   defaultMealSchedule,
   enabledSlotsFromSchedule,
 } from "../../src/domain/schedule.js";
-import type { Settings, Meal } from "../../src/domain/types.js";
+import { makeSettings } from "../helpers/settings.js";
+import type { Meal } from "../../src/domain/types.js";
 
-const settings: Settings = {
-  members: [
-    { label: "Adult A", consumptionFactor: 1.15 },
-    { label: "Adult B", consumptionFactor: 1.15 },
-    { label: "Toddler", consumptionFactor: 0.5 },
-  ],
-  restrictions: ["no_spicy", "low_fodmap"],
-  avoidIngredients: ["beans", "lentils", "onion", "garlic"],
-  proteinCadence: { veg_per_week: 1, red_or_high_fat_per_week: 1 },
-  effort: "easy",
-  defaultVegQuantities: {},
-  mealSchedule: defaultMealSchedule(),
-};
+const settings = makeSettings();
 
 const input = {
   settings,
@@ -46,29 +35,46 @@ describe("buildCurationPrompt", () => {
     expect(prompt.toLowerCase()).not.toContain("veg box");
   });
 
-  it("states the restrictions as strict excludes", () => {
-    expect(prompt.toLowerCase()).toContain("no_spicy");
-    expect(prompt.toLowerCase()).toContain("low_fodmap");
+  it("states the household avoid-list as strict excludes", () => {
+    // default profile avoids "spicy"
+    expect(prompt).toContain("spicy");
     expect(prompt.toLowerCase()).toContain("exclude");
+    expect(prompt.toLowerCase()).toContain("avoid");
   });
 
-  it("lists the avoid-ingredients from settings as excludes", () => {
-    for (const ing of settings.avoidIngredients) {
-      expect(prompt).toContain(ing);
-    }
+  it("states the diet as a guide", () => {
+    expect(prompt).toContain("low_fodmap");
+    expect(prompt.toLowerCase()).toContain("diet");
+    // explicit selections take precedence over the diet label
+    expect(prompt.toLowerCase()).toContain("precedence");
   });
 
-  it("describes the protein cadence", () => {
+  it("weights proteins by frequency and excludes 'never' proteins", () => {
     const lower = prompt.toLowerCase();
-    expect(lower).toContain("vegetarian");
-    expect(lower).toMatch(/red|high[- ]fat/);
-    expect(lower).toContain("lean");
-    // named lean proteins
-    expect(lower).toContain("chicken");
-    expect(lower).toContain("tuna");
-    expect(lower).toContain("fish");
-    expect(lower).toContain("turkey");
-    expect(lower).toContain("eggs");
+    // an "often" protein from the default profile
+    expect(prompt).toContain("chicken");
+    expect(lower).toContain("often");
+    expect(lower).toContain("weekly");
+    // a "never" protein is listed in the EXCLUDE line
+    const excludeLine = prompt
+      .split("\n")
+      .find((l) => l.toLowerCase().includes("exclude these proteins"))!;
+    expect(excludeLine).toContain("pork");
+    // and a frequently-used protein is NOT in the exclude line
+    expect(excludeLine).not.toContain("chicken");
+  });
+
+  it("leans toward liked cuisines, dish types and flavours", () => {
+    // default profile likes mediterranean cuisine, stir_fry dishes, umami flavour
+    expect(prompt).toContain("mediterranean");
+    expect(prompt).toContain("stir_fry");
+    expect(prompt).toContain("umami");
+    expect(prompt.toLowerCase()).toContain("lean toward");
+  });
+
+  it("states the household serving count", () => {
+    // default household = adult hearty x2 (2.4) + child standard (0.5) = 2.9 -> 3
+    expect(prompt).toContain("3 servings");
   });
 
   it("asks for easy ~30-minute dinners", () => {
@@ -222,10 +228,11 @@ describe("buildRegeneratePrompt", () => {
     expect(prompt).toContain("2");
   });
 
-  it("states the standing constraints (no spicy, low-fodmap, lean protein, easy ~30 min)", () => {
+  it("states the standing constraints (avoid-list, diet, protein class, easy ~30 min)", () => {
     const lower = prompt.toLowerCase();
-    expect(lower).toContain("no_spicy");
-    expect(lower).toContain("low_fodmap");
+    // default profile avoids "spicy" and follows the low_fodmap diet
+    expect(prompt).toContain("spicy");
+    expect(prompt).toContain("low_fodmap");
     expect(lower).toContain("lean");
     expect(lower).toContain("30");
     expect(lower).toContain("easy");

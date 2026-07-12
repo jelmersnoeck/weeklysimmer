@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type Database from "better-sqlite3";
 import { openDb } from "../../src/db/index.js";
-import { seedSettings } from "../../src/db/seed.js";
+import { saveSettings } from "../../src/db/settingsRepo.js";
+import { makeSettings } from "../helpers/settings.js";
 import { generatePlan } from "../../src/llm/curationService.js";
 import type { PlanCurator, CuratorInput } from "../../src/llm/anthropicClient.js";
 import type { RawPlan } from "../../src/llm/planSchema.js";
@@ -69,7 +70,7 @@ describe("generatePlan", () => {
 
   beforeEach(() => {
     db = openDb(":memory:");
-    seedSettings(db);
+    saveSettings(db, makeSettings());
   });
 
   afterEach(() => {
@@ -106,7 +107,7 @@ describe("generatePlan", () => {
     expect(calls[0].weekStart).toBe(input.weekStart);
     expect(calls[0].onHand).toEqual(input.onHand);
     expect(calls[0].avoid).toEqual(input.avoid);
-    expect(calls[0].settings.members).toHaveLength(3);
+    expect(calls[0].settings.household).toHaveLength(3);
     // the enabled slots are passed straight through to the curator
     expect(calls[0].enabledSlots).toEqual(input.enabledSlots);
   });

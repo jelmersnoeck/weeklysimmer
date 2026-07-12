@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../.env") });
 
 import { openDb } from "./db/index.js";
-import { seedSettings } from "./db/seed.js";
 import { createApp } from "./app.js";
 import {
   createAnthropicCurator,
@@ -16,13 +15,8 @@ import { sharedStore } from "./jobs/registry.js";
 
 const db = openDb(process.env.DATABASE_PATH ?? "./mealplanner.db");
 
-// Seed default settings if the table is empty.
-const count = db
-  .prepare("SELECT COUNT(*) AS n FROM settings")
-  .get() as { n: number };
-if (count.n === 0) {
-  seedSettings(db);
-}
+// No settings seeding on boot: getSettings() synthesizes an unconfigured default
+// profile, and the user configures their own via PUT /api/settings.
 
 const curator = createAnthropicCurator(makeAnthropicClient());
 const port = Number(process.env.PORT ?? 3001);

@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { getSettings } from "../db/seed.js";
+import { getSettings } from "../db/settingsRepo.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
 import type {
@@ -59,7 +59,7 @@ export async function generatePlan(
     seen.add(key);
   }
 
-  const servings = householdServings(settings.members);
+  const servings = householdServings(settings.household);
 
   const meals: Meal[] = raw.meals.map((m) => ({
     day: m.day,

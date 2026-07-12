@@ -5,21 +5,13 @@ import {
   type CuratorInput,
 } from "../../src/llm/anthropicClient.js";
 import type { RawPlan } from "../../src/llm/planSchema.js";
-import type { Settings } from "../../src/domain/types.js";
 import {
   defaultMealSchedule,
   enabledSlotsFromSchedule,
 } from "../../src/domain/schedule.js";
+import { makeSettings } from "../helpers/settings.js";
 
-const settings: Settings = {
-  members: [{ label: "Adult", consumptionFactor: 1.15 }],
-  restrictions: ["no_spicy"],
-  avoidIngredients: ["beans"],
-  proteinCadence: { veg_per_week: 1, red_or_high_fat_per_week: 1 },
-  effort: "easy",
-  defaultVegQuantities: {},
-  mealSchedule: defaultMealSchedule(),
-};
+const settings = makeSettings();
 
 const input: CuratorInput = {
   settings,

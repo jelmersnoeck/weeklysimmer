@@ -3,19 +3,31 @@ import { householdServings, scaleIngredient } from "../../src/domain/portions.js
 import type { HouseholdMember, Ingredient } from "../../src/domain/types.js";
 
 const household: HouseholdMember[] = [
-  { label: "Adult A", consumptionFactor: 1.15 },
-  { label: "Adult B", consumptionFactor: 1.15 },
-  { label: "Toddler", consumptionFactor: 0.5 },
+  { id: "a1", type: "adult", appetite: "hearty" },
+  { id: "a2", type: "adult", appetite: "hearty" },
+  { id: "c1", type: "child", appetite: "standard" },
 ];
 
 describe("householdServings", () => {
-  it("sums consumption factors and rounds up to whole servings", () => {
-    // 1.15 + 1.15 + 0.5 = 2.8 -> 3 servings (round up so nobody goes hungry)
+  it("sums appetite factors and rounds up to whole servings", () => {
+    // adult hearty 1.2 x2 + child standard 0.5 = 2.9 -> 3 (round up so nobody goes hungry)
     expect(householdServings(household)).toBe(3);
   });
 
-  it("handles a single adult", () => {
-    expect(householdServings([{ label: "Solo", consumptionFactor: 1.15 }])).toBe(2);
+  it("handles a single standard adult (factor 1.0 -> 1 serving)", () => {
+    expect(
+      householdServings([{ id: "s1", type: "adult", appetite: "standard" }]),
+    ).toBe(1);
+  });
+
+  it("rounds a very-active pair up", () => {
+    // 1.4 + 1.4 = 2.8 -> 3
+    expect(
+      householdServings([
+        { id: "a1", type: "adult", appetite: "very_active" },
+        { id: "a2", type: "adult", appetite: "very_active" },
+      ]),
+    ).toBe(3);
   });
 });
 

@@ -3,7 +3,8 @@ import request from "supertest";
 import type { Express } from "express";
 import type Database from "better-sqlite3";
 import { openDb } from "../../src/db/index.js";
-import { seedSettings } from "../../src/db/seed.js";
+import { saveSettings } from "../../src/db/settingsRepo.js";
+import { makeSettings } from "../helpers/settings.js";
 import { createApp } from "../../src/app.js";
 import { createJobStore, type JobStore } from "../../src/jobs/registry.js";
 import type {
@@ -99,7 +100,7 @@ function makeApp(): {
   curateCalls: CuratorInput[];
 } {
   const db = openDb(":memory:");
-  seedSettings(db);
+  saveSettings(db, makeSettings());
   const regenCalls: RegenerateMealInput[] = [];
   const curateCalls: CuratorInput[] = [];
   const store = createJobStore();
