@@ -1,0 +1,96 @@
+/* Design tokens for the Meal Prep Planner — "the prep sheet".
+   Every color in the app derives from these variables. */
+:root {
+  /* Palette */
+  --ink: #1e2a22;
+  --paper: #fbfaf6;
+  --herb: #3f6b4c;
+  --squash: #d9a441;
+  --beet: #8e3b5e;
+  --sage: #eaede4;
+  --sage-line: #d7dccb;
+
+  /* Derived tints */
+  --herb-tint: #eaf0eb;
+  --beet-tint: #f6e9ef;
+  --ink-60: #55605a;
+  --ink-40: #8a938d;
+
+  /* Type families */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-soft: 0 1px 2px rgba(30, 42, 34, 0.06), 0 4px 16px rgba(30, 42, 34, 0.06);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* Numbers, measurements, quantities read as a kitchen prep sheet. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--herb);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+button {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
