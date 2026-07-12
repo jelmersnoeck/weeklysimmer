@@ -37,6 +37,12 @@
   color: var(--ink-60);
 }
 
+.meal-detail__time {
+  margin: var(--space-2) 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-60);
+}
+
 .meal-detail__error {
   margin: 0;
   padding: var(--space-2) var(--space-3);

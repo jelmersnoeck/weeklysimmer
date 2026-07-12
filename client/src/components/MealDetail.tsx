@@ -5,6 +5,7 @@ import {
   DAY_LABELS_LONG,
   PROTEIN_LABELS,
   difficultyLabel,
+  mealTotalMinutes,
   proteinTagVariant,
   slotLabel,
 } from "../lib/meal";
@@ -28,6 +29,7 @@ export function MealDetail({
   onRegenerated,
 }: MealDetailProps) {
   const [rating, setRating] = useState<number>(meal.rating ?? 0);
+  const totalMinutes = mealTotalMinutes(meal);
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +83,13 @@ export function MealDetail({
             </span>
             <span className="tag">{difficultyLabel(meal.difficulty)}</span>
           </p>
+          {totalMinutes !== null && (
+            <p className="meal-detail__time">
+              Prep <span className="mono">{meal.prepMinutes ?? 0}</span> · Cook{" "}
+              <span className="mono">{meal.cookMinutes ?? 0}</span> · Total{" "}
+              <span className="mono">{totalMinutes}</span> min
+            </p>
+          )}
         </div>
         <button
           type="button"

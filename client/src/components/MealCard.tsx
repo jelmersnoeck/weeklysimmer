@@ -3,6 +3,7 @@ import {
   DAY_LABELS,
   PROTEIN_LABELS,
   difficultyLabel,
+  mealTotalMinutes,
   proteinTagVariant,
   slotLabel,
 } from "../lib/meal";
@@ -15,6 +16,7 @@ interface MealCardProps {
 
 export function MealCard({ meal, onSelect }: MealCardProps) {
   const isLeftover = Boolean(meal.leftoverOf);
+  const totalMinutes = mealTotalMinutes(meal);
 
   return (
     <button
@@ -24,6 +26,11 @@ export function MealCard({ meal, onSelect }: MealCardProps) {
     >
       <span className="meal-card__title">{meal.title}</span>
       <span className="meal-card__cuisine">{meal.cuisine}</span>
+      {totalMinutes !== null && (
+        <span className="meal-card__time">
+          ⏱ <span className="mono">{totalMinutes}</span> min
+        </span>
+      )}
       <span className="meal-card__tags">
         <span className={`tag ${proteinTagVariant(meal.proteinClass)}`}>
           {PROTEIN_LABELS[meal.proteinClass]}

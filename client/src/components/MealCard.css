@@ -32,6 +32,11 @@
   color: var(--ink-60);
 }
 
+.meal-card__time {
+  font-size: 0.8rem;
+  color: var(--ink-60);
+}
+
 .meal-card__tags {
   display: flex;
   flex-wrap: wrap;
