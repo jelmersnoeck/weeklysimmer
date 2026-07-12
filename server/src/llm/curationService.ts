@@ -36,7 +36,7 @@ export async function generatePlan(
 
   // Two meals sharing a (day, slot) corrupt the shopping list and the UI only
   // shows the first — reject rather than silently drop one. (A slightly short
-  // week is fine: it renders as gaps, so we do NOT enforce a full 21-meal count.)
+  // week is fine: it renders as gaps, so we do NOT enforce a full 35-meal count.)
   const seen = new Set<string>();
   for (const m of raw.meals) {
     const key = `${m.day}:${m.slot}`;

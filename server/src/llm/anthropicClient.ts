@@ -33,7 +33,7 @@ export interface PlanCurator {
 /**
  * Minimal shape of the Anthropic client the wrapper actually uses. Narrow on
  * purpose so a fake can satisfy it in tests without a network call. We stream the
- * request (required for large outputs — a 21-meal plan exceeds the SDK's
+ * request (required for large outputs — a 35-meal plan exceeds the SDK's
  * non-streaming size guard) and read `parsed_output` off the final message.
  */
 export interface MinimalAnthropicClient {
@@ -45,7 +45,7 @@ export interface MinimalAnthropicClient {
 }
 
 const MODEL = "claude-opus-4-8";
-// A 21-meal plan is a large output. We stream (see MinimalAnthropicClient) so the
+// A 35-meal plan is a large output. We stream (see MinimalAnthropicClient) so the
 // SDK doesn't reject the request under its 10-minute non-streaming ceiling.
 const MAX_TOKENS = 32000;
 

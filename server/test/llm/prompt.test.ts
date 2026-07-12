@@ -85,14 +85,27 @@ describe("buildCurationPrompt", () => {
     expect(prompt.toLowerCase()).toContain("repeat");
   });
 
-  it("requires 21 meals across 7 days x 3 slots and web search with sourceUrl", () => {
-    expect(prompt).toContain("21");
+  it("requires 35 meals across 7 days x 5 slots and web search with sourceUrl", () => {
+    expect(prompt).toContain("35");
     expect(prompt).toContain("7");
     expect(prompt.toLowerCase()).toContain("web search");
     expect(prompt).toContain("sourceUrl");
     // day range 0-6
     expect(prompt).toContain("0");
     expect(prompt).toContain("6");
+  });
+
+  it("names both snack slots and describes two simple no-cook snacks per day", () => {
+    expect(prompt).toContain("morning_snack");
+    expect(prompt).toContain("afternoon_snack");
+    const lower = prompt.toLowerCase();
+    expect(lower).toContain("snack");
+    expect(lower).toMatch(/no-cook|minimal prep/);
+  });
+
+  it("asks for prep and cook time on every meal", () => {
+    expect(prompt).toContain("prepMinutes");
+    expect(prompt).toContain("cookMinutes");
   });
 
   it("specifies per-single-serving quantities, units and shopping categories", () => {
@@ -194,6 +207,21 @@ describe("buildRegeneratePrompt", () => {
   it("includes the veg box and note", () => {
     expect(prompt).toContain("carrots");
     expect(prompt).toContain(regenInput.note);
+  });
+
+  it("asks for prep and cook time in the single-meal output", () => {
+    expect(prompt).toContain("prepMinutes");
+    expect(prompt).toContain("cookMinutes");
+  });
+
+  it("works for a snack target slot", () => {
+    const snackPrompt = buildRegeneratePrompt({
+      ...regenInput,
+      slot: "afternoon_snack",
+    });
+    expect(snackPrompt).toContain("afternoon_snack");
+    expect(snackPrompt.toLowerCase()).toContain("snack");
+    expect(snackPrompt).toContain("prepMinutes");
   });
 
   it("is a non-trivial pure string", () => {

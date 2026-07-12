@@ -69,8 +69,19 @@ Ingredients to EXCLUDE entirely (never use these): ${avoidIngredients}.
 - The REST of the meals should be lean, high-protein: chicken, tuna, fish, turkey, eggs.
 Classify each meal's proteinClass as exactly one of: "lean", "red_or_high_fat", "vegetarian".
 
-## Effort
-Dinners must be "easy" ~30-minute weeknight dinners. Keep steps short and simple.
+## Effort & meal times
+Dinners must be "easy" ~30-minute weeknight dinners (keep prepMinutes + cookMinutes
+≲ 30). Keep steps short and simple.
+Every meal MUST include realistic prep and cook time as integer minutes: "prepMinutes"
+(hands-on prep) and "cookMinutes" (time actually cooking; use 0 for no-cook meals).
+
+## Snacks (two per day: mid-morning and mid-afternoon)
+- Each day has a "morning_snack" (mid-morning) and an "afternoon_snack" (mid-afternoon).
+- Keep snacks simple and mostly no-cook or minimal prep — e.g. Greek yogurt, boiled
+  eggs, cottage cheese, veg sticks, oatcakes, or fruit that fits low-FODMAP.
+- Make them lean and high-protein where possible, and toddler-friendly.
+- Snacks respect the same standing constraints (no spicy, low-FODMAP, avoid the
+  avoid-list). Snacks typically have "cookMinutes": 0.
 
 ## Leftovers & shared-base strategy
 - Dinners are the real cooked meals of the day.
@@ -85,8 +96,8 @@ ${avoidRepeat}
 Do not repeat any meal listed above.
 
 ## Output requirements
-- Produce a FULL week: 7 days (day 0 = Monday through day 6 = Sunday) x 3 slots
-  (breakfast, lunch, dinner) = 21 meals total.
+- Produce a FULL week: 7 days (day 0 = Monday through day 6 = Sunday) x 5 slots
+  (breakfast, morning_snack, lunch, afternoon_snack, dinner) = 35 meals total.
 - Use the web search tool to find REAL recipes, and return a "sourceUrl" for each meal
   where possible (the URL of the recipe you based it on).
 - Ingredient quantities are PER SINGLE SERVING (the app scales them for the household).
@@ -156,6 +167,11 @@ keep the week's protein balance. Do not switch it to a different protein class.
 - Favour lean, high-protein choices (chicken, tuna, fish, turkey, eggs) unless this
   slot is meant to be vegetarian or a red/high-fat-meat meal.
 - Keep it easy: an ~30-minute weeknight dinner with short, simple steps.
+- If this slot is a snack (morning_snack or afternoon_snack), keep it simple and mostly
+  no-cook or minimal prep (e.g. Greek yogurt, boiled eggs, cottage cheese, veg sticks,
+  fruit) — lean, high-protein and toddler-friendly where possible.
+- Include realistic prep and cook time as integer minutes: "prepMinutes" (hands-on prep)
+  and "cookMinutes" (0 for no-cook meals). Keep dinners' prepMinutes + cookMinutes ≲ 30.
 
 ## Variety — be DIFFERENT
 The plan already contains these meals; the replacement MUST be different from them,
