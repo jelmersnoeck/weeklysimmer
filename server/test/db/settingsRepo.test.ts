@@ -60,6 +60,21 @@ describe("getSettings", () => {
     db.close();
   });
 
+  it("backfills fields added after a row was saved (e.g. units)", () => {
+    const db = openDb(":memory:");
+    // A configured v2 row saved before `units` existed — omit it from storage.
+    const { units, ...withoutUnits } = makeSettings({ diets: ["low_fodmap"] });
+    db.prepare("INSERT OR REPLACE INTO settings (id, data) VALUES (1, ?)").run(
+      JSON.stringify(withoutUnits),
+    );
+    const settings = getSettings(db);
+    expect(settings.configured).toBe(true);
+    expect(settings.diets).toEqual(["low_fodmap"]);
+    // missing `units` is backfilled from the current defaults rather than undefined
+    expect(settings.units).toEqual(defaultSettings().units);
+    db.close();
+  });
+
   it("drops a removed diet value when migrating an old `diet` row", () => {
     const db = openDb(":memory:");
     const { diets, ...rest } = makeSettings();

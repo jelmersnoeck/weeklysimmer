@@ -44,17 +44,24 @@ export function getSettings(db: Database.Database): Settings {
   }
   if (!isV2Backbone(parsed)) return defaultSettings();
 
-  // Already the new (multi-select) shape — return verbatim.
-  if (Array.isArray(parsed.diets)) return parsed as unknown as Settings;
-
-  // Old single-`diet` row: migrate to `diets`, dropping any value not in the new enum.
-  if (typeof parsed.diet === "string") {
-    const { diet, ...rest } = parsed;
-    const diets = DIETS.includes(diet as Diet) ? [diet as Diet] : [];
-    return { ...(rest as unknown as Settings), diets };
+  // A configured v2 row. Merge it OVER the current defaults so any field added after
+  // the row was saved (e.g. `units`) is backfilled instead of coming back undefined,
+  // while the user's stored values still win. Legacy single-`diet` rows are coerced to
+  // `diets` (dropping values no longer in the enum, like `dairy_free`).
+  const { diet, diets, ...rest } = parsed as Record<string, unknown>;
+  let resolvedDiets: Diet[] = [];
+  if (Array.isArray(diets)) {
+    resolvedDiets = (diets as Diet[]).filter((d) => DIETS.includes(d));
+  } else if (typeof diet === "string" && DIETS.includes(diet as Diet)) {
+    resolvedDiets = [diet as Diet];
   }
 
-  return defaultSettings();
+  return {
+    ...defaultSettings(),
+    ...(rest as Partial<Settings>),
+    diets: resolvedDiets,
+    configured: true,
+  } as Settings;
 }
 
 /**
