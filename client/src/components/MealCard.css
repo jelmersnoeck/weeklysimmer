@@ -57,3 +57,12 @@
   color: var(--ink);
   border-color: transparent;
 }
+
+.meal-card__onhand-badge {
+  background: var(--herb-tint);
+  color: var(--herb);
+  border-color: transparent;
+  text-transform: none;
+  letter-spacing: 0;
+  gap: var(--space-1);
+}

@@ -7,16 +7,19 @@ import {
   proteinTagVariant,
   slotLabel,
 } from "../lib/meal";
+import { mealUsesOnHand } from "../lib/onHand";
 import "./MealCard.css";
 
 interface MealCardProps {
   meal: Meal;
   onSelect: (meal: Meal) => void;
+  onHand?: string[];
 }
 
-export function MealCard({ meal, onSelect }: MealCardProps) {
+export function MealCard({ meal, onSelect, onHand = [] }: MealCardProps) {
   const isLeftover = Boolean(meal.leftoverOf);
   const totalMinutes = mealTotalMinutes(meal);
+  const usesOnHand = mealUsesOnHand(meal, onHand);
 
   return (
     <button
@@ -45,6 +48,15 @@ export function MealCard({ meal, onSelect }: MealCardProps) {
           {PROTEIN_LABELS[meal.proteinClass]}
         </span>
         <span className="tag">{difficultyLabel(meal.difficulty)}</span>
+        {usesOnHand.length > 0 && (
+          <span
+            className="tag meal-card__onhand-badge"
+            title={`Uses your ${usesOnHand.join(", ")}`}
+          >
+            <span aria-hidden="true">🌿</span> Uses your{" "}
+            {usesOnHand.length === 1 ? usesOnHand[0] : "ingredients"}
+          </span>
+        )}
         {isLeftover && meal.leftoverOf && (
           <span className="tag meal-card__leftover-badge">
             Leftovers · {DAY_LABELS[meal.leftoverOf.day]}{" "}
