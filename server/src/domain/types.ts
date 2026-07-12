@@ -47,7 +47,7 @@ export interface Settings {
 export interface WeeklyPlan {
   id?: number;
   weekStart: string;  // ISO date (Monday)
-  vegBox: string[];   // vegetable type names
+  onHand: string[];   // foods the household already has and wants to use up
   note: string;
   status: "draft" | "active" | "archived";
   meals: Meal[];

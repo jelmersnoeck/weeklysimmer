@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS weekly_plans (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   week_start TEXT NOT NULL,
-  veg_box TEXT NOT NULL,
+  on_hand TEXT NOT NULL,
   note TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))

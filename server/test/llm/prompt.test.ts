@@ -18,7 +18,7 @@ const settings: Settings = {
 const input = {
   settings,
   weekStart: "2026-07-13",
-  vegBox: ["carrots", "leek", "spinach"],
+  onHand: ["carrots", "leek", "spinach"],
   note: "prefer lighter meals this week",
   avoid: ["Lemon chicken with rice", "Tuna pasta bake"],
 };
@@ -26,16 +26,18 @@ const input = {
 describe("buildCurationPrompt", () => {
   const prompt = buildCurationPrompt(input);
 
-  it("includes every veg-box item", () => {
-    for (const veg of input.vegBox) {
-      expect(prompt).toContain(veg);
+  it("includes every on-hand item", () => {
+    for (const food of input.onHand) {
+      expect(prompt).toContain(food);
     }
   });
 
-  it("instructs to build the week around using up the veg box first / minimize waste", () => {
-    expect(prompt.toLowerCase()).toContain("veg box");
-    expect(prompt.toLowerCase()).toMatch(/using up|use up/);
+  it("instructs to build the week around using up on-hand foods / minimize waste", () => {
+    expect(prompt.toLowerCase()).toContain("use up");
+    expect(prompt.toLowerCase()).toContain("already has");
     expect(prompt.toLowerCase()).toContain("waste");
+    // no lingering "veg box" wording after generalization
+    expect(prompt.toLowerCase()).not.toContain("veg box");
   });
 
   it("states the restrictions as strict excludes", () => {
@@ -163,7 +165,7 @@ describe("buildRegeneratePrompt", () => {
     day: 2,
     slot: "dinner" as const,
     proteinClass: "lean" as const,
-    vegBox: ["carrots", "leek"],
+    onHand: ["carrots", "leek"],
     note: "lighter please",
     otherMeals,
   };
@@ -204,7 +206,7 @@ describe("buildRegeneratePrompt", () => {
     expect(prompt).toContain("Tuna Pasta Bake");
   });
 
-  it("includes the veg box and note", () => {
+  it("includes the on-hand foods and note", () => {
     expect(prompt).toContain("carrots");
     expect(prompt).toContain(regenInput.note);
   });

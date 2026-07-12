@@ -76,7 +76,7 @@ describe("generatePlan", () => {
 
   const input = {
     weekStart: "2026-07-13",
-    vegBox: ["carrots", "spinach"],
+    onHand: ["carrots", "spinach"],
     note: "lighter week",
     avoid: ["Tuna pasta bake"],
   };
@@ -98,7 +98,7 @@ describe("generatePlan", () => {
     await generatePlan(db, curator, input);
     expect(calls).toHaveLength(1);
     expect(calls[0].weekStart).toBe(input.weekStart);
-    expect(calls[0].vegBox).toEqual(input.vegBox);
+    expect(calls[0].onHand).toEqual(input.onHand);
     expect(calls[0].avoid).toEqual(input.avoid);
     expect(calls[0].settings.members).toHaveLength(3);
   });
@@ -108,7 +108,7 @@ describe("generatePlan", () => {
     const { plan } = await generatePlan(db, curator, input);
 
     expect(plan.weekStart).toBe(input.weekStart);
-    expect(plan.vegBox).toEqual(input.vegBox);
+    expect(plan.onHand).toEqual(input.onHand);
     expect(plan.note).toBe(input.note);
     expect(plan.status).toBe("active");
     expect(plan.meals).toHaveLength(2);
@@ -139,14 +139,6 @@ describe("generatePlan", () => {
     expect(rice.totalQuantity).toBe(180);
     const carrots = shopping.find((s) => s.name.toLowerCase() === "carrots")!;
     expect(carrots.totalQuantity).toBe(300);
-  });
-
-  it("reports veg that no meal used", async () => {
-    const { curator } = fakeCurator(cannedPlan);
-    const { unusedVeg } = await generatePlan(db, curator, input);
-    // carrots are used; spinach is not.
-    expect(unusedVeg).toContain("spinach");
-    expect(unusedVeg).not.toContain("carrots");
   });
 
   it("does not persist the plan", async () => {

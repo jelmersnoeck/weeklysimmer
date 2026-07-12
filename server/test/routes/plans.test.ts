@@ -95,13 +95,13 @@ function makeApp(): {
 
 const generateBody = {
   weekStart: "2026-07-13",
-  vegBox: ["carrots", "spinach"],
+  onHand: ["carrots", "spinach"],
   note: "lighter week",
   avoid: ["Tuna pasta bake"],
 };
 
 describe("POST /api/plans/generate", () => {
-  it("creates a plan, scales ingredients x3, aggregates shopping and reports unused veg", async () => {
+  it("creates a plan, scales ingredients x3 and aggregates shopping", async () => {
     const { app, db } = makeApp();
     const res = await request(app).post("/api/plans/generate").send(generateBody);
 
@@ -123,10 +123,6 @@ describe("POST /api/plans/generate", () => {
     );
     expect(shopChicken.totalQuantity).toBe(450);
 
-    // unused veg present: spinach used by no meal, carrots is used
-    expect(res.body.unusedVeg).toContain("spinach");
-    expect(res.body.unusedVeg).not.toContain("carrots");
-
     // follow-up GET finds it
     const get = await request(app).get(`/api/plans/${res.body.planId}`);
     expect(get.status).toBe(200);
@@ -138,26 +134,26 @@ describe("POST /api/plans/generate", () => {
     const { app, db } = makeApp();
     const res = await request(app)
       .post("/api/plans/generate")
-      .send({ vegBox: [], note: "", avoid: [] });
+      .send({ onHand: [], note: "", avoid: [] });
     expect(res.status).toBe(400);
     expect(res.body.error).toBeTruthy();
     db.close();
   });
 
-  it("returns 400 when vegBox is not an array", async () => {
+  it("returns 400 when onHand is not an array", async () => {
     const { app, db } = makeApp();
     const res = await request(app)
       .post("/api/plans/generate")
-      .send({ weekStart: "2026-07-13", vegBox: "carrots" });
+      .send({ weekStart: "2026-07-13", onHand: "carrots" });
     expect(res.status).toBe(400);
     db.close();
   });
 
-  it("returns 400 when a vegBox entry is not a string", async () => {
+  it("returns 400 when an onHand entry is not a string", async () => {
     const { app, db } = makeApp();
     const res = await request(app)
       .post("/api/plans/generate")
-      .send({ weekStart: "2026-07-13", vegBox: ["carrots", 42] });
+      .send({ weekStart: "2026-07-13", onHand: ["carrots", 42] });
     expect(res.status).toBe(400);
     expect(res.body.error).toBeTruthy();
     db.close();
@@ -192,7 +188,7 @@ describe("GET /api/plans/:id", () => {
     db.close();
   });
 
-  it("returns plan, shopping and recomputed unusedVeg", async () => {
+  it("returns plan and shopping only", async () => {
     const { app, db } = makeApp();
     const created = await request(app)
       .post("/api/plans/generate")
@@ -202,7 +198,7 @@ describe("GET /api/plans/:id", () => {
     expect(res.status).toBe(200);
     expect(res.body.plan.weekStart).toBe("2026-07-13");
     expect(res.body.shopping.length).toBeGreaterThan(0);
-    expect(res.body.unusedVeg).toContain("spinach");
+    expect(res.body).not.toHaveProperty("unusedVeg");
     db.close();
   });
 });

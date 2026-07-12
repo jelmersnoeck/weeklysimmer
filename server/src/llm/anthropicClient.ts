@@ -8,7 +8,7 @@ import { planSchema, rawMealSchema, type RawPlan, type RawMeal } from "./planSch
 export interface CuratorInput {
   settings: Settings;
   weekStart: string;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   avoid: string[];
 }
@@ -18,7 +18,7 @@ export interface RegenerateMealInput {
   day: number;
   slot: Slot;
   proteinClass: ProteinClass;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   otherMeals: Meal[];
 }

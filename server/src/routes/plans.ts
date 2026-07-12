@@ -13,7 +13,6 @@ import {
 import { generatePlan } from "../llm/curationService.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
-import { unusedVegetables } from "../domain/coverage.js";
 import type { Meal } from "../domain/types.js";
 import type { RawMeal } from "../llm/planSchema.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
@@ -56,20 +55,20 @@ export function plansRouter(
 
   // Generate + persist a new weekly plan.
   router.post("/plans/generate", async (req, res) => {
-    const { weekStart, vegBox, note, avoid } = req.body ?? {};
+    const { weekStart, onHand, note, avoid } = req.body ?? {};
     if (typeof weekStart !== "string" || weekStart.length === 0) {
       throw new HttpError(400, "weekStart must be a non-empty string");
     }
-    if (!Array.isArray(vegBox)) {
-      throw new HttpError(400, "vegBox must be an array");
+    if (!Array.isArray(onHand)) {
+      throw new HttpError(400, "onHand must be an array");
     }
-    if (!vegBox.every((v) => typeof v === "string")) {
-      throw new HttpError(400, "vegBox entries must all be strings");
+    if (!onHand.every((v) => typeof v === "string")) {
+      throw new HttpError(400, "onHand entries must all be strings");
     }
 
-    const { plan, shopping, unusedVeg } = await generatePlan(db, deps.curator, {
+    const { plan, shopping } = await generatePlan(db, deps.curator, {
       weekStart,
-      vegBox,
+      onHand,
       note: typeof note === "string" ? note : "",
       avoid: Array.isArray(avoid) ? avoid : [],
     });
@@ -77,7 +76,7 @@ export function plansRouter(
     const id = savePlan(db, plan);
     saveShoppingItems(db, id, shopping);
 
-    res.status(201).json({ planId: id, plan: getPlan(db, id), shopping, unusedVeg });
+    res.status(201).json({ planId: id, plan: getPlan(db, id), shopping });
   });
 
   // List plan summaries, newest first.
@@ -85,7 +84,7 @@ export function plansRouter(
     res.json(listPlans(db));
   });
 
-  // Fetch a single plan with its shopping list and recomputed unused veg.
+  // Fetch a single plan with its shopping list.
   router.get("/plans/:id", (req, res) => {
     const id = Number(req.params.id);
     const plan = getPlan(db, id);
@@ -95,7 +94,6 @@ export function plansRouter(
     res.json({
       plan,
       shopping: getShoppingItems(db, id),
-      unusedVeg: unusedVegetables(plan.vegBox, plan.meals),
     });
   });
 
@@ -140,7 +138,7 @@ export function plansRouter(
       day: target.day,
       slot: target.slot,
       proteinClass: target.proteinClass,
-      vegBox: plan.vegBox,
+      onHand: plan.onHand,
       note: plan.note,
       otherMeals: plan.meals.filter((m) => m.id !== mealId),
     });
@@ -155,7 +153,6 @@ export function plansRouter(
     res.json({
       plan: updated,
       shopping,
-      unusedVeg: unusedVegetables(updated.vegBox, updated.meals),
     });
   });
 

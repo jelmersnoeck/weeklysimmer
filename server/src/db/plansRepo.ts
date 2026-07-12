@@ -17,7 +17,7 @@ const SLOT_ORDER: Record<Slot, number> = {
 interface PlanRow {
   id: number;
   week_start: string;
-  veg_box: string;
+  on_hand: string;
   note: string;
   status: WeeklyPlan["status"];
   created_at: string;
@@ -60,7 +60,7 @@ export interface PlanSummary {
 
 export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
   const insertPlan = db.prepare(
-    "INSERT INTO weekly_plans (week_start, veg_box, note, status) VALUES (?, ?, ?, ?)"
+    "INSERT INTO weekly_plans (week_start, on_hand, note, status) VALUES (?, ?, ?, ?)"
   );
   const insertMeal = db.prepare(
     `INSERT INTO meals
@@ -73,7 +73,7 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
   const tx = db.transaction((p: WeeklyPlan): number => {
     const result = insertPlan.run(
       p.weekStart,
-      JSON.stringify(p.vegBox),
+      JSON.stringify(p.onHand),
       p.note,
       p.status
     );
@@ -125,7 +125,7 @@ export function getPlan(db: Database.Database, id: number): WeeklyPlan | null {
   return {
     id: planRow.id,
     weekStart: planRow.week_start,
-    vegBox: JSON.parse(planRow.veg_box) as string[],
+    onHand: JSON.parse(planRow.on_hand) as string[],
     note: planRow.note,
     status: planRow.status,
     meals,

@@ -19,7 +19,7 @@ const settings: Settings = {
 const input: CuratorInput = {
   settings,
   weekStart: "2026-07-13",
-  vegBox: ["carrots"],
+  onHand: ["carrots"],
   note: "",
   avoid: [],
 };
@@ -111,7 +111,7 @@ const regenInput = {
   day: 2,
   slot: "dinner" as const,
   proteinClass: "lean" as const,
-  vegBox: ["carrots"],
+  onHand: ["carrots"],
   note: "lighter",
   otherMeals: [],
 };

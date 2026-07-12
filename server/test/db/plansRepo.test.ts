@@ -54,7 +54,7 @@ function samplePlan(overrides: Partial<WeeklyPlan> = {}): WeeklyPlan {
   };
   return {
     weekStart: "2026-07-13",
-    vegBox: ["carrot", "leek"],
+    onHand: ["carrot", "leek"],
     note: "test week",
     status: "draft",
     meals: [dinner, lunch, breakfast],
@@ -72,7 +72,7 @@ describe("plansRepo", () => {
     expect(plan).not.toBeNull();
     expect(plan!.id).toBe(id);
     expect(plan!.weekStart).toBe("2026-07-13");
-    expect(plan!.vegBox).toEqual(["carrot", "leek"]);
+    expect(plan!.onHand).toEqual(["carrot", "leek"]);
     expect(plan!.note).toBe("test week");
     expect(plan!.status).toBe("draft");
     expect(plan!.meals.length).toBe(3);

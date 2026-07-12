@@ -23,6 +23,28 @@ export function openDb(path: string): Database.Database {
 function migrate(db: Database.Database): void {
   addColumnIfMissing(db, "meals", "prep_minutes", "INTEGER");
   addColumnIfMissing(db, "meals", "cook_minutes", "INTEGER");
+  renameColumnIfNeeded(db, "weekly_plans", "veg_box", "on_hand");
+}
+
+/**
+ * Rename a column on an existing table when the old column still exists and the
+ * new one does not yet. Safe to run repeatedly: once renamed, this is a no-op.
+ */
+function renameColumnIfNeeded(
+  db: Database.Database,
+  table: string,
+  oldColumn: string,
+  newColumn: string,
+): void {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as {
+    name: string;
+  }[];
+  const names = cols.map((c) => c.name);
+  if (names.includes(oldColumn) && !names.includes(newColumn)) {
+    db.exec(
+      `ALTER TABLE ${table} RENAME COLUMN ${oldColumn} TO ${newColumn}`,
+    );
+  }
 }
 
 function addColumnIfMissing(

@@ -19,7 +19,7 @@ const DAY_NAMES = [
 export interface CurationPromptInput {
   settings: Settings;
   weekStart: string;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   avoid: string[];
 }
@@ -32,9 +32,9 @@ export interface CurationPromptInput {
  * code scales portions and builds the shopping list afterwards.
  */
 export function buildCurationPrompt(input: CurationPromptInput): string {
-  const { settings, weekStart, vegBox, note, avoid } = input;
+  const { settings, weekStart, onHand, note, avoid } = input;
 
-  const vegList = vegBox.length > 0 ? vegBox.join(", ") : "(none this week)";
+  const onHandList = onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
   const restrictions =
     settings.restrictions.length > 0 ? settings.restrictions.join(", ") : "(none)";
   const avoidIngredients =
@@ -51,11 +51,11 @@ You are ONLY responsible for choosing REAL recipes and returning them as structu
 data. The application scales portions and builds the shopping list itself, so you do
 not need to do any arithmetic on quantities.
 
-## Veg box — build the week AROUND it
-This week's veg box contains: ${vegList}.
-Build the whole week around USING UP the veg box first. Every veg-box item should be
-used in at least one meal so nothing goes to waste. Minimize food waste — prefer
-recipes that consume these vegetables before adding new produce.
+## Foods to use up — build the week AROUND them
+These are foods the household already has and wants to use up: ${onHandList}.
+Build the whole week around USING THESE UP first. Every item should be used in at
+least one meal so nothing goes to waste. Minimize food waste — prefer recipes that
+consume these foods before adding new ingredients.
 
 ## Hard restrictions (STRICT — always EXCLUDE)
 Dietary restrictions to strictly exclude: ${restrictions}.
@@ -113,7 +113,7 @@ export interface RegeneratePromptInput {
   day: number;
   slot: Slot;
   proteinClass: ProteinClass;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   otherMeals: Meal[];
 }
@@ -126,11 +126,11 @@ export interface RegeneratePromptInput {
  * that must be meaningfully different from the other meals already in the plan.
  */
 export function buildRegeneratePrompt(input: RegeneratePromptInput): string {
-  const { settings, day, slot, proteinClass, vegBox, note, otherMeals } = input;
+  const { settings, day, slot, proteinClass, onHand, note, otherMeals } = input;
 
   const dayName = DAY_NAMES[day] ?? `day ${day}`;
   const proteinWords = PROTEIN_CLASS_WORDS[proteinClass];
-  const vegList = vegBox.length > 0 ? vegBox.join(", ") : "(none this week)";
+  const onHandList = onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
   const restrictions =
     settings.restrictions.length > 0 ? settings.restrictions.join(", ") : "(none)";
   const avoidIngredients =
@@ -149,9 +149,9 @@ existing weekly plan and return it as a single structured meal.
 Regenerate the meal for ${dayName} (day ${day}), slot: ${slot}.
 User note for this week: ${note}
 
-## Veg box — prefer using it up
-This week's veg box contains: ${vegList}. Prefer a recipe that helps use up these
-vegetables so nothing goes to waste.
+## Foods to use up — prefer using them up
+The household already has these foods to use up: ${onHandList}. Prefer a recipe that
+helps use up these foods so nothing goes to waste.
 
 ## Hard restrictions (STRICT — always EXCLUDE)
 Dietary restrictions to strictly exclude: ${restrictions}.

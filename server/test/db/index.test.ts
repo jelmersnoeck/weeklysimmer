@@ -7,6 +7,13 @@ function mealColumns(db: Database.Database): string[] {
   return cols.map((c) => c.name);
 }
 
+function planColumns(db: Database.Database): string[] {
+  const cols = db
+    .prepare("PRAGMA table_info(weekly_plans)")
+    .all() as { name: string }[];
+  return cols.map((c) => c.name);
+}
+
 describe("openDb", () => {
   it("creates the expected tables", () => {
     const db = openDb(":memory:");
@@ -67,6 +74,44 @@ describe("openDb", () => {
     const cols = mealColumns(db2);
     expect(cols.filter((c) => c === "prep_minutes")).toHaveLength(1);
     expect(cols.filter((c) => c === "cook_minutes")).toHaveLength(1);
+    db2.close();
+  });
+
+  it("a fresh db has the on_hand column (not veg_box) on weekly_plans", () => {
+    const db = openDb(":memory:");
+    const cols = planColumns(db);
+    expect(cols).toContain("on_hand");
+    expect(cols).not.toContain("veg_box");
+    db.close();
+  });
+
+  it("migration renames veg_box to on_hand on a pre-existing weekly_plans table", () => {
+    // Simulate an OLD database file: weekly_plans still has the veg_box column.
+    const path = `/tmp/mealplanner-renamecol-${Date.now()}.db`;
+    const old = new Database(path);
+    old.exec(
+      `CREATE TABLE weekly_plans (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         week_start TEXT NOT NULL,
+         veg_box TEXT NOT NULL,
+         note TEXT NOT NULL DEFAULT '',
+         status TEXT NOT NULL,
+         created_at TEXT NOT NULL DEFAULT (datetime('now'))
+       )`,
+    );
+    expect(planColumns(old)).toContain("veg_box");
+    expect(planColumns(old)).not.toContain("on_hand");
+    old.close();
+
+    // Re-opening through openDb runs the idempotent rename.
+    const db = openDb(path);
+    expect(planColumns(db)).toContain("on_hand");
+    expect(planColumns(db)).not.toContain("veg_box");
+    db.close();
+
+    // Running it again is a no-op (idempotent).
+    const db2 = openDb(path);
+    expect(planColumns(db2)).toContain("on_hand");
     db2.close();
   });
 });

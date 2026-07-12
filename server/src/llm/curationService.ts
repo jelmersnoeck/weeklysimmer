@@ -2,13 +2,12 @@ import type Database from "better-sqlite3";
 import { getSettings } from "../db/seed.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
 import { buildShoppingList } from "../domain/shopping.js";
-import { unusedVegetables } from "../domain/coverage.js";
 import type { Meal, ShoppingItem, WeeklyPlan } from "../domain/types.js";
 import type { PlanCurator } from "./anthropicClient.js";
 
 export interface GeneratePlanInput {
   weekStart: string;
-  vegBox: string[];
+  onHand: string[];
   note: string;
   avoid: string[];
 }
@@ -16,12 +15,11 @@ export interface GeneratePlanInput {
 export interface GeneratePlanResult {
   plan: WeeklyPlan;
   shopping: ShoppingItem[];
-  unusedVeg: string[];
 }
 
 /**
  * Curate a weekly plan: ask the LLM for raw recipes, then let deterministic code
- * scale portions to household quantities and derive the shopping list + veg coverage.
+ * scale portions to household quantities and derive the shopping list.
  *
  * Meals STORE portion-scaled (household) quantities. Does NOT persist — routes will
  * persist in a later phase.
@@ -67,14 +65,13 @@ export async function generatePlan(
 
   const plan: WeeklyPlan = {
     weekStart: input.weekStart,
-    vegBox: input.vegBox,
+    onHand: input.onHand,
     note: input.note,
     status: "active",
     meals,
   };
 
   const shopping = buildShoppingList(meals);
-  const unusedVeg = unusedVegetables(input.vegBox, meals);
 
-  return { plan, shopping, unusedVeg };
+  return { plan, shopping };
 }
