@@ -23,6 +23,8 @@ export interface Meal {
   proteinClass: ProteinClass;
   base: string;       // "rice" | "pasta" | "potato" | "none" | ...
   difficulty: Difficulty;
+  prepMinutes?: number;  // hands-on prep time in minutes
+  cookMinutes?: number;  // cooking time in minutes (0 for no-cook meals)
   servings?: number;  // whole servings the meal's ingredients are scaled to
   ingredients: Ingredient[];
   steps: string[];

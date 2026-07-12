@@ -34,6 +34,8 @@ const validPlan: RawPlan = {
       proteinClass: "lean",
       base: "rice",
       difficulty: "easy",
+      prepMinutes: 10,
+      cookMinutes: 20,
       ingredients: [{ name: "chicken breast", quantity: 150, unit: "g", category: "meat" }],
       steps: ["Cook."],
       sourceUrl: "https://example.com/r",

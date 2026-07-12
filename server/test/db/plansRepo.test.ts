@@ -156,6 +156,45 @@ describe("plansRepo", () => {
     db.close();
   });
 
+  it("round-trips a meal's prep and cook minutes (and maps NULL to undefined)", () => {
+    const db = openDb(":memory:");
+    const withTimes: Meal = {
+      day: 0,
+      slot: "dinner",
+      title: "Timed Meal",
+      cuisine: "western",
+      proteinClass: "lean",
+      base: "rice",
+      difficulty: "easy",
+      prepMinutes: 12,
+      cookMinutes: 18,
+      ingredients: [{ name: "rice", quantity: 60, unit: "g", category: "pantry" }],
+      steps: ["Cook"],
+      leftoverOf: null,
+    };
+    const noTimes: Meal = {
+      day: 1,
+      slot: "breakfast",
+      title: "Untimed Meal",
+      cuisine: "western",
+      proteinClass: "vegetarian",
+      base: "none",
+      difficulty: "easy",
+      ingredients: [{ name: "oats", quantity: 60, unit: "g", category: "pantry" }],
+      steps: ["Boil"],
+      leftoverOf: null,
+    };
+    const id = savePlan(db, samplePlan({ meals: [withTimes, noTimes] }));
+    const meals = getPlan(db, id)!.meals;
+    const timed = meals.find((m) => m.title === "Timed Meal")!;
+    expect(timed.prepMinutes).toBe(12);
+    expect(timed.cookMinutes).toBe(18);
+    const untimed = meals.find((m) => m.title === "Untimed Meal")!;
+    expect(untimed.prepMinutes).toBeUndefined();
+    expect(untimed.cookMinutes).toBeUndefined();
+    db.close();
+  });
+
   it("returns null for an unknown plan", () => {
     const db = openDb(":memory:");
     expect(getPlan(db, 999)).toBeNull();

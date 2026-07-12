@@ -9,6 +9,8 @@ const validMeal = {
   proteinClass: "lean" as const,
   base: "rice",
   difficulty: "easy" as const,
+  prepMinutes: 10,
+  cookMinutes: 20,
   ingredients: [
     { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
     { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -40,6 +42,24 @@ describe("planSchema", () => {
 
   it("rejects a slot outside the enum", () => {
     expect(() => rawMealSchema.parse({ ...validMeal, slot: "brunch" })).toThrow();
+  });
+
+  it("accepts prep and cook minutes and rejects when either is missing", () => {
+    const parsed = rawMealSchema.parse(validMeal);
+    expect(parsed.prepMinutes).toBe(10);
+    expect(parsed.cookMinutes).toBe(20);
+
+    const { prepMinutes, ...noPrep } = validMeal;
+    expect(() => rawMealSchema.parse(noPrep)).toThrow();
+    const { cookMinutes, ...noCook } = validMeal;
+    expect(() => rawMealSchema.parse(noCook)).toThrow();
+    // a no-cook snack (cookMinutes: 0) is valid
+    expect(
+      rawMealSchema.parse({ ...validMeal, slot: "morning_snack", cookMinutes: 0 })
+        .cookMinutes,
+    ).toBe(0);
+    // negative minutes rejected
+    expect(() => rawMealSchema.parse({ ...validMeal, prepMinutes: -1 })).toThrow();
   });
 
   it("rejects a negative ingredient quantity", () => {

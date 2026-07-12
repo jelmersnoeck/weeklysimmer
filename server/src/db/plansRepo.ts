@@ -32,6 +32,8 @@ interface MealRow {
   protein_class: Meal["proteinClass"];
   base: string;
   difficulty: Meal["difficulty"];
+  prep_minutes: number | null;
+  cook_minutes: number | null;
   servings: number;
   ingredients: string;
   steps: string;
@@ -63,8 +65,9 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
   const insertMeal = db.prepare(
     `INSERT INTO meals
       (plan_id, day, slot, title, cuisine, protein_class, base, difficulty,
-       servings, ingredients, steps, source_url, leftover_of, rating)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       prep_minutes, cook_minutes, servings, ingredients, steps, source_url,
+       leftover_of, rating)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   const tx = db.transaction((p: WeeklyPlan): number => {
@@ -85,6 +88,8 @@ export function savePlan(db: Database.Database, plan: WeeklyPlan): number {
         meal.proteinClass,
         meal.base,
         meal.difficulty,
+        meal.prepMinutes ?? null,
+        meal.cookMinutes ?? null,
         meal.servings ?? 1,
         JSON.stringify(meal.ingredients),
         JSON.stringify(meal.steps),
@@ -171,7 +176,8 @@ export function updateMeal(
   db.prepare(
     `UPDATE meals SET
        title = ?, cuisine = ?, protein_class = ?, base = ?, difficulty = ?,
-       servings = ?, ingredients = ?, steps = ?, source_url = ?, leftover_of = ?, rating = NULL
+       prep_minutes = ?, cook_minutes = ?, servings = ?, ingredients = ?,
+       steps = ?, source_url = ?, leftover_of = ?, rating = NULL
      WHERE id = ?`
   ).run(
     meal.title,
@@ -179,6 +185,8 @@ export function updateMeal(
     meal.proteinClass,
     meal.base,
     meal.difficulty,
+    meal.prepMinutes ?? null,
+    meal.cookMinutes ?? null,
     meal.servings ?? 1,
     JSON.stringify(meal.ingredients),
     JSON.stringify(meal.steps),
@@ -246,6 +254,8 @@ function rowToMeal(row: MealRow): Meal {
     proteinClass: row.protein_class,
     base: row.base,
     difficulty: row.difficulty,
+    prepMinutes: row.prep_minutes ?? undefined,
+    cookMinutes: row.cook_minutes ?? undefined,
     servings: row.servings,
     ingredients: JSON.parse(row.ingredients),
     steps: JSON.parse(row.steps),

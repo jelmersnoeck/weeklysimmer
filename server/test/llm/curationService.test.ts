@@ -16,6 +16,8 @@ const cannedPlan: RawPlan = {
       proteinClass: "lean",
       base: "rice",
       difficulty: "easy",
+      prepMinutes: 10,
+      cookMinutes: 20,
       ingredients: [
         { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
         { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -33,6 +35,8 @@ const cannedPlan: RawPlan = {
       proteinClass: "lean",
       base: "rice",
       difficulty: "easy",
+      prepMinutes: 5,
+      cookMinutes: 0,
       ingredients: [
         { name: "chicken breast", quantity: 100, unit: "g", category: "meat" },
         { name: "rice", quantity: 40, unit: "g", category: "grains" },
@@ -117,6 +121,10 @@ describe("generatePlan", () => {
     expect(dinner.cuisine).toBe("mediterranean");
     expect(dinner.base).toBe("rice");
     expect(dinner.difficulty).toBe("easy");
+    // prep/cook time survives generate
+    expect(dinner.prepMinutes).toBe(10);
+    expect(dinner.cookMinutes).toBe(20);
+    expect(lunch.cookMinutes).toBe(0);
   });
 
   it("aggregates the shopping list from scaled quantities, excluding leftover meals", async () => {

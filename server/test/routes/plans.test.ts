@@ -20,6 +20,8 @@ const cannedPlan: RawPlan = {
       proteinClass: "lean",
       base: "rice",
       difficulty: "easy",
+      prepMinutes: 10,
+      cookMinutes: 20,
       ingredients: [
         { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
         { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -37,6 +39,8 @@ const cannedPlan: RawPlan = {
       proteinClass: "lean",
       base: "rice",
       difficulty: "easy",
+      prepMinutes: 5,
+      cookMinutes: 0,
       ingredients: [
         { name: "chicken breast", quantity: 100, unit: "g", category: "meat" },
       ],
@@ -54,6 +58,8 @@ const replacementMeal: RawMeal = {
   proteinClass: "lean",
   base: "rice",
   difficulty: "easy",
+  prepMinutes: 15,
+  cookMinutes: 15,
   ingredients: [
     { name: "turkey mince", quantity: 160, unit: "g", category: "meat" },
     { name: "rice", quantity: 60, unit: "g", category: "grains" },
@@ -291,6 +297,9 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
     expect(newDinner.day).toBe(0);
     // rating reset
     expect(newDinner.rating).toBeNull();
+    // prep/cook time carried onto the replacement
+    expect(newDinner.prepMinutes).toBe(15);
+    expect(newDinner.cookMinutes).toBe(15);
     // replacement ingredients scaled x3
     const turkey = newDinner.ingredients.find(
       (i: { name: string }) => i.name === "turkey mince",
