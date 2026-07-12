@@ -1,5 +1,6 @@
 import type { Meal, ShoppingItem } from "./types.js";
 import { toBaseUnit, baseUnit } from "./units.js";
+import { canonicalCategory } from "./categories.js";
 
 /**
  * Aggregate every ingredient across all meals into one shopping list.
@@ -57,7 +58,12 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
       if (existing) {
         existing.total += amount;
       } else {
-        groups.set(key, { name: ing.name, category: ing.category, unit, total: amount });
+        groups.set(key, {
+          name: ing.name,
+          category: canonicalCategory(ing.name, ing.category),
+          unit,
+          total: amount,
+        });
       }
     }
   }

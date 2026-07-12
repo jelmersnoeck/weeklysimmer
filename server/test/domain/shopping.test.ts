@@ -25,7 +25,8 @@ describe("buildShoppingList", () => {
       meal([{ name: "rice", quantity: 180, unit: "g", category: "grains" }]),
     ];
     expect(buildShoppingList(meals)).toEqual([
-      { name: "rice", totalQuantity: 360, unit: "g", category: "grains", checked: false },
+      // rice is a bulk staple, so its aisle is canonicalized to bulk_staples
+      { name: "rice", totalQuantity: 360, unit: "g", category: "bulk_staples", checked: false },
     ]);
   });
 
@@ -76,6 +77,48 @@ describe("buildShoppingList", () => {
     expect(buildShoppingList(meals)).toEqual([
       { name: "chicken", totalQuantity: 450, unit: "g", category: "meat", checked: false },
     ]);
+  });
+
+  it("reclassifies shelf-stable staples into the bulk_staples category", () => {
+    const meals = [
+      meal([
+        { name: "basmati rice", quantity: 60, unit: "g", category: "grains" },
+        { name: "penne pasta", quantity: 80, unit: "g", category: "grains" },
+        { name: "canned tuna", quantity: 100, unit: "g", category: "fish" },
+      ]),
+    ];
+    const list = buildShoppingList(meals);
+    for (const name of ["basmati rice", "penne pasta", "canned tuna"]) {
+      expect(list.find((i) => i.name === name)!.category).toBe("bulk_staples");
+    }
+  });
+
+  it("leaves perishable ingredients' categories unchanged", () => {
+    const meals = [
+      meal([
+        { name: "chicken breast", quantity: 150, unit: "g", category: "meat" },
+        { name: "olive oil", quantity: 15, unit: "ml", category: "pantry" },
+      ]),
+    ];
+    const list = buildShoppingList(meals);
+    expect(list.find((i) => i.name === "chicken breast")!.category).toBe("meat");
+    expect(list.find((i) => i.name === "olive oil")!.category).toBe("pantry");
+  });
+
+  it("merges rice variants by name and lands them in bulk_staples", () => {
+    const meals = [
+      meal([{ name: "cooked rice", quantity: 100, unit: "g", category: "grains" }]),
+      meal([{ name: "cooked rice", quantity: 50, unit: "g", category: "grains" }]),
+      meal([{ name: "jasmine rice", quantity: 60, unit: "g", category: "grains" }]),
+    ];
+    const list = buildShoppingList(meals);
+    const cooked = list.find((i) => i.name === "cooked rice")!;
+    expect(cooked.totalQuantity).toBe(150);
+    expect(cooked.category).toBe("bulk_staples");
+    const jasmine = list.find((i) => i.name === "jasmine rice")!;
+    expect(jasmine.category).toBe("bulk_staples");
+    // both sit under the same aisle
+    expect(list.every((i) => i.category === "bulk_staples")).toBe(true);
   });
 
   it("groups and sorts by category, then name", () => {
