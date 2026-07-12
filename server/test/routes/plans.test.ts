@@ -146,6 +146,16 @@ describe("POST /api/plans/generate", () => {
     expect(res.status).toBe(400);
     db.close();
   });
+
+  it("returns 400 when a vegBox entry is not a string", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post("/api/plans/generate")
+      .send({ weekStart: "2026-07-13", vegBox: ["carrots", 42] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+    db.close();
+  });
 });
 
 describe("GET /api/plans", () => {

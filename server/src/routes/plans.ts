@@ -61,6 +61,9 @@ export function plansRouter(
     if (!Array.isArray(vegBox)) {
       throw new HttpError(400, "vegBox must be an array");
     }
+    if (!vegBox.every((v) => typeof v === "string")) {
+      throw new HttpError(400, "vegBox entries must all be strings");
+    }
 
     const { plan, shopping, unusedVeg } = await generatePlan(db, deps.curator, {
       weekStart,
