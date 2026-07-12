@@ -4,7 +4,10 @@ import type Database from "better-sqlite3";
 import { openDb } from "../../src/db/index.js";
 import { seedSettings } from "../../src/db/seed.js";
 import { createApp } from "../../src/app.js";
-import type { PlanCurator } from "../../src/llm/anthropicClient.js";
+import type {
+  PlanCurator,
+  RegenerateMealInput,
+} from "../../src/llm/anthropicClient.js";
 import type { RawPlan, RawMeal } from "../../src/llm/planSchema.js";
 
 const cannedPlan: RawPlan = {
@@ -60,22 +63,28 @@ const replacementMeal: RawMeal = {
   leftoverOf: null,
 };
 
-function fakeCurator(): PlanCurator {
+function fakeCurator(regenCalls: RegenerateMealInput[]): PlanCurator {
   return {
     async curate() {
       return cannedPlan;
     },
-    async regenerateMeal() {
+    async regenerateMeal(input) {
+      regenCalls.push(input);
       return replacementMeal;
     },
   };
 }
 
-function makeApp(): { app: ReturnType<typeof createApp>; db: Database.Database } {
+function makeApp(): {
+  app: ReturnType<typeof createApp>;
+  db: Database.Database;
+  regenCalls: RegenerateMealInput[];
+} {
   const db = openDb(":memory:");
   seedSettings(db);
-  const app = createApp(db, { curator: fakeCurator() });
-  return { app, db };
+  const regenCalls: RegenerateMealInput[] = [];
+  const app = createApp(db, { curator: fakeCurator(regenCalls) });
+  return { app, db, regenCalls };
 }
 
 const generateBody = {
@@ -269,6 +278,25 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
       (s: { name: string }) => s.name.toLowerCase() === "chicken breast",
     );
     expect(shopChicken).toBeUndefined();
+    db.close();
+  });
+
+  it("passes the target meal's protein class through to the curator", async () => {
+    const { app, db, regenCalls } = makeApp();
+    const created = await request(app)
+      .post("/api/plans/generate")
+      .send(generateBody);
+    const dinner = created.body.plan.meals.find(
+      (m: { slot: string }) => m.slot === "dinner",
+    );
+
+    await request(app).post(
+      `/api/plans/${created.body.planId}/meals/${dinner.id}/regenerate`,
+    );
+
+    expect(regenCalls).toHaveLength(1);
+    // the day-0 dinner is a "lean" meal in cannedPlan
+    expect(regenCalls[0].proteinClass).toBe("lean");
     db.close();
   });
 

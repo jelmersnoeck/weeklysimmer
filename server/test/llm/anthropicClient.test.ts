@@ -108,6 +108,7 @@ const regenInput = {
   settings,
   day: 2,
   slot: "dinner" as const,
+  proteinClass: "lean" as const,
   vegBox: ["carrots"],
   note: "lighter",
   otherMeals: [],

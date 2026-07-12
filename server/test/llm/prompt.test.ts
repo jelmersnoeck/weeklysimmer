@@ -149,12 +149,24 @@ describe("buildRegeneratePrompt", () => {
     settings,
     day: 2,
     slot: "dinner" as const,
+    proteinClass: "lean" as const,
     vegBox: ["carrots", "leek"],
     note: "lighter please",
     otherMeals,
   };
 
   const prompt = buildRegeneratePrompt(regenInput);
+
+  it("requires the replacement to keep the slot's protein class", () => {
+    const vegPrompt = buildRegeneratePrompt({
+      ...regenInput,
+      proteinClass: "vegetarian",
+    });
+    expect(vegPrompt.toLowerCase()).toContain("vegetarian");
+    // instructs the replacement MUST also be that class
+    expect(vegPrompt.toLowerCase()).toMatch(/must also be|must be|protein balance/);
+    expect(vegPrompt.toLowerCase()).toContain("protein");
+  });
 
   it("names the target day and slot", () => {
     expect(prompt.toLowerCase()).toContain("dinner");

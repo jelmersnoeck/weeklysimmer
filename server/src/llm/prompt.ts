@@ -1,4 +1,10 @@
-import type { Settings, Meal, Slot } from "../domain/types.js";
+import type { Settings, Meal, Slot, ProteinClass } from "../domain/types.js";
+
+const PROTEIN_CLASS_WORDS: Record<ProteinClass, string> = {
+  lean: "lean protein",
+  red_or_high_fat: "red or higher-fat meat",
+  vegetarian: "vegetarian",
+};
 
 const DAY_NAMES = [
   "Monday",
@@ -95,6 +101,7 @@ export interface RegeneratePromptInput {
   settings: Settings;
   day: number;
   slot: Slot;
+  proteinClass: ProteinClass;
   vegBox: string[];
   note: string;
   otherMeals: Meal[];
@@ -108,9 +115,10 @@ export interface RegeneratePromptInput {
  * that must be meaningfully different from the other meals already in the plan.
  */
 export function buildRegeneratePrompt(input: RegeneratePromptInput): string {
-  const { settings, day, slot, vegBox, note, otherMeals } = input;
+  const { settings, day, slot, proteinClass, vegBox, note, otherMeals } = input;
 
   const dayName = DAY_NAMES[day] ?? `day ${day}`;
+  const proteinWords = PROTEIN_CLASS_WORDS[proteinClass];
   const vegList = vegBox.length > 0 ? vegBox.join(", ") : "(none this week)";
   const restrictions =
     settings.restrictions.length > 0 ? settings.restrictions.join(", ") : "(none)";
@@ -139,6 +147,10 @@ Dietary restrictions to strictly exclude: ${restrictions}.
 - no_spicy: no chilli, hot peppers, or spicy heat.
 - low_fodmap: keep the meal low-FODMAP.
 Ingredients to EXCLUDE entirely (never use these): ${avoidIngredients}.
+
+## Protein class (STRICT — keep the week's balance)
+This slot is a ${proteinWords} meal — the replacement MUST also be ${proteinWords} to
+keep the week's protein balance. Do not switch it to a different protein class.
 
 ## Protein & effort
 - Favour lean, high-protein choices (chicken, tuna, fish, turkey, eggs) unless this

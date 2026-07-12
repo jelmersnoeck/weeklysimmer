@@ -129,6 +129,7 @@ export function plansRouter(
       settings,
       day: target.day,
       slot: target.slot,
+      proteinClass: target.proteinClass,
       vegBox: plan.vegBox,
       note: plan.note,
       otherMeals: plan.meals.filter((m) => m.id !== mealId),
