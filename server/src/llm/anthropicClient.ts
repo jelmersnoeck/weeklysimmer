@@ -8,8 +8,18 @@ import type {
   ProteinClass,
   EnabledSlot,
 } from "../domain/types.js";
-import { buildCurationPrompt, buildRegeneratePrompt } from "./prompt.js";
-import { planSchema, rawMealSchema, type RawPlan, type RawMeal } from "./planSchema.js";
+import {
+  buildCurationPrompt,
+  buildRegeneratePrompt,
+  buildConsolidationPrompt,
+} from "./prompt.js";
+import {
+  planSchema,
+  rawMealSchema,
+  consolidationSchema,
+  type RawPlan,
+  type RawMeal,
+} from "./planSchema.js";
 
 export interface CuratorInput {
   settings: Settings;
@@ -35,6 +45,14 @@ export interface PlanCurator {
   curate(input: CuratorInput): Promise<RawPlan>;
   /** Produce a single replacement meal for one slot in an existing plan. */
   regenerateMeal(input: RegenerateMealInput): Promise<RawMeal>;
+  /**
+   * Review a built shopping list: for each item name, return a canonical
+   * grocery-product name so code can re-merge same-product lines. The LLM ONLY
+   * names — all quantity arithmetic stays in deterministic code.
+   */
+  consolidateShopping(
+    names: string[],
+  ): Promise<Array<{ name: string; canonical: string }>>;
 }
 
 /**
@@ -100,6 +118,17 @@ export function createAnthropicCurator(client: MinimalAnthropicClient): PlanCura
     },
     regenerateMeal(input: RegenerateMealInput): Promise<RawMeal> {
       return curateStructured(client, rawMealSchema, buildRegeneratePrompt(input), "regeneration");
+    },
+    async consolidateShopping(
+      names: string[],
+    ): Promise<Array<{ name: string; canonical: string }>> {
+      const result = await curateStructured(
+        client,
+        consolidationSchema,
+        buildConsolidationPrompt(names),
+        "consolidation",
+      );
+      return result.items;
     },
   };
 }

@@ -89,6 +89,9 @@ function fakeCurator(
       regenCalls.push(input);
       return replacementMeal;
     },
+    async consolidateShopping(names) {
+      return names.map((n) => ({ name: n, canonical: n }));
+    },
   };
 }
 

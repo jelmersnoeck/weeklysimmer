@@ -13,6 +13,9 @@ const fakeCurator: PlanCurator = {
   async regenerateMeal() {
     throw new Error("not used");
   },
+  async consolidateShopping(names) {
+    return names.map((n) => ({ name: n, canonical: n }));
+  },
 };
 
 function app(db = openDb(":memory:")) {

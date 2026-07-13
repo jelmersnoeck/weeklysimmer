@@ -281,3 +281,52 @@ ${otherTitles}
 
 Return the single meal as structured data matching the required schema.`;
 }
+
+/**
+ * Build the (pure, no-network) prompt for the shopping-list CONSOLIDATION REVIEW.
+ *
+ * The LLM ONLY assigns each input item a canonical grocery-product name; deterministic
+ * code re-merges the quantities afterwards (never trust the model for arithmetic). The
+ * goal is to fold differently-worded names for the SAME purchasable product onto one
+ * canonical, while keeping genuinely different products distinct.
+ */
+export function buildConsolidationPrompt(names: string[]): string {
+  const list =
+    names.length > 0 ? names.map((n) => `- ${n}`).join("\n") : "- (none)";
+
+  return `You are reviewing a grocery shopping list. Each line is an item name that came
+from recipe ingredients. Different recipes often name the SAME purchasable grocery
+product differently (preparation words, varieties, brand-style adjectives).
+
+## Your job
+For EACH input item name below, return a "canonical" grocery-product name. Items that are
+the SAME product a shopper would buy once should be given the SAME canonical name so the
+app can merge them into a single shopping line.
+
+## Items to review
+${list}
+
+## Merge items that are the SAME purchasable product
+Ignore preparation and variety wording when the underlying product is the same thing you
+buy at the shop:
+- "cooked rice", "jasmine rice", "white rice" → "rice"
+- "unsalted butter", "butter" → "butter"
+- "baby spinach", "spinach" → "spinach"
+
+## KEEP genuinely different products distinct
+Do NOT merge products a shopper would buy separately, even if the words overlap:
+- "brown rice" ≠ "rice" (white)
+- "sweet potato" ≠ "potato"
+- "coconut milk" ≠ "milk"
+- "spring onion" ≠ "onion"
+
+## Rules
+- Return EVERY input name exactly once, each paired with its canonical.
+- The canonical MAY equal the input name (leave it as-is when it is already canonical or
+  has no match to merge with).
+- When UNSURE whether two items are the same product, keep them SEPARATE — do not
+  over-merge.
+
+Return the mapping as structured data matching the required schema (an "items" array of
+{ "name", "canonical" } objects).`;
+}

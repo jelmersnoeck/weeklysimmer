@@ -137,3 +137,39 @@ describe("createAnthropicCurator.regenerateMeal", () => {
     await expect(curator.regenerateMeal(regenInput)).rejects.toThrow();
   });
 });
+
+describe("createAnthropicCurator.consolidateShopping", () => {
+  it("returns the parsed name→canonical mapping and passes the names to the client", async () => {
+    const canned = {
+      items: [
+        { name: "cooked rice", canonical: "rice" },
+        { name: "jasmine rice", canonical: "rice" },
+        { name: "brown rice", canonical: "brown rice" },
+      ],
+    };
+    const { client, calls } = fakeClient(canned);
+    const curator = createAnthropicCurator(client);
+
+    const mapping = await curator.consolidateShopping([
+      "cooked rice",
+      "jasmine rice",
+      "brown rice",
+    ]);
+
+    expect(mapping).toEqual(canned.items);
+    expect(calls).toHaveLength(1);
+    const params = calls[0];
+    expect(params.model).toBe("claude-opus-4-8");
+    expect(params.output_config).toBeTruthy();
+    const messages = params.messages as Array<{ role: string; content: string }>;
+    // the prompt lists the input item names
+    expect(messages[0].content).toContain("cooked rice");
+    expect(messages[0].content).toContain("brown rice");
+  });
+
+  it("throws when the structured output is invalid", async () => {
+    const { client } = fakeClient({ items: [{ name: "rice" }] });
+    const curator = createAnthropicCurator(client);
+    await expect(curator.consolidateShopping(["rice"])).rejects.toThrow();
+  });
+});

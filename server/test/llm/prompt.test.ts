@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildCurationPrompt, buildRegeneratePrompt } from "../../src/llm/prompt.js";
+import {
+  buildCurationPrompt,
+  buildRegeneratePrompt,
+  buildConsolidationPrompt,
+} from "../../src/llm/prompt.js";
 import {
   defaultMealSchedule,
   enabledSlotsFromSchedule,
@@ -286,6 +290,45 @@ describe("buildRegeneratePrompt", () => {
     expect(snackPrompt).toContain("afternoon_snack");
     expect(snackPrompt.toLowerCase()).toContain("snack");
     expect(snackPrompt).toContain("prepMinutes");
+  });
+
+  it("is a non-trivial pure string", () => {
+    expect(typeof prompt).toBe("string");
+    expect(prompt.length).toBeGreaterThan(150);
+  });
+});
+
+describe("buildConsolidationPrompt", () => {
+  const names = ["cooked rice", "jasmine rice", "brown rice", "baby spinach"];
+  const prompt = buildConsolidationPrompt(names);
+
+  it("lists every input item name", () => {
+    for (const name of names) {
+      expect(prompt).toContain(name);
+    }
+  });
+
+  it("asks for a canonical grocery-product name per input", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toContain("canonical");
+    // return every input name exactly once
+    expect(lower).toContain("each");
+  });
+
+  it("states the same-product merge rule with examples", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toContain("same");
+    // merge examples: rice variants collapse to "rice"
+    expect(prompt).toContain("cooked rice");
+    expect(lower).toContain("rice");
+  });
+
+  it("states the keep-distinct rule with examples", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toMatch(/keep|distinct|different|separate/);
+    // genuinely different products stay apart
+    expect(prompt).toContain("brown rice");
+    expect(lower).toContain("unsure");
   });
 
   it("is a non-trivial pure string", () => {

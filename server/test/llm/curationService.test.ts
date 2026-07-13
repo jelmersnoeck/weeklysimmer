@@ -61,6 +61,9 @@ function fakeCurator(plan: RawPlan): { curator: PlanCurator; calls: CuratorInput
     async regenerateMeal() {
       throw new Error("not used in generatePlan tests");
     },
+    async consolidateShopping(names) {
+      return names.map((n) => ({ name: n, canonical: n }));
+    },
   };
   return { curator, calls };
 }

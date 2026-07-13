@@ -42,5 +42,15 @@ export const rawMealSchema = z.object({
 
 export const planSchema = z.object({ meals: z.array(rawMealSchema).min(1) });
 
+/**
+ * Shopping-list consolidation review: for EACH input item name the LLM returns a
+ * `canonical` grocery-product name. Same-product items share a canonical (so code
+ * can re-merge them); genuinely different products keep distinct canonicals.
+ */
+export const consolidationSchema = z.object({
+  items: z.array(z.object({ name: z.string(), canonical: z.string() })),
+});
+
 export type RawMeal = z.infer<typeof rawMealSchema>;
 export type RawPlan = z.infer<typeof planSchema>;
+export type Consolidation = z.infer<typeof consolidationSchema>;
