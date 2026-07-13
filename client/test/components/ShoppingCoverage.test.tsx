@@ -23,6 +23,13 @@ describe("ShoppingList", () => {
     expect(within(dairy).queryByText("Leek")).not.toBeInTheDocument();
   });
 
+  test("notes the foods you already have (excluded from the list)", () => {
+    render(<ShoppingList items={items} onHand={["carrots", "rice"]} />);
+    expect(
+      screen.getByText(/you said you already have: carrots, rice/i),
+    ).toBeInTheDocument();
+  });
+
   test("renders a friendly 'Bulk staples' section for bulk_staples items", () => {
     render(
       <ShoppingList

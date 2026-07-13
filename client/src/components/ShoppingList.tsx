@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { MeasurementSystem, ShoppingItem } from "../types";
 import { formatQuantity } from "../lib/quantity";
+import { copyText } from "../lib/clipboard";
+import { remindersShortcutUrl, REMINDERS_SHORTCUT_NAME } from "../lib/reminders";
 import "./ShoppingList.css";
 
 interface ShoppingListProps {
@@ -8,6 +10,8 @@ interface ShoppingListProps {
   units?: MeasurementSystem[];
   // Plan id, so the checked-off state can be remembered per plan across refreshes.
   planId?: number;
+  // Foods the user said they already have; shown as a note (they're excluded from the list).
+  onHand?: string[];
 }
 
 function storageKey(planId?: number): string | null {
@@ -102,7 +106,12 @@ export function buildShoppingText(
     .join("\n");
 }
 
-export function ShoppingList({ items, units = ["metric"], planId }: ShoppingListProps) {
+export function ShoppingList({
+  items,
+  units = ["metric"],
+  planId,
+  onHand = [],
+}: ShoppingListProps) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     // Seed from the remembered per-plan state (localStorage), else the item defaults.
     const remembered = readChecked(planId);
@@ -110,7 +119,9 @@ export function ShoppingList({ items, units = ["metric"], planId }: ShoppingList
       items.map((i) => [i.name, remembered[i.name] ?? i.checked]),
     );
   });
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "empty">("idle");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed" | "empty">(
+    "idle",
+  );
   const [fallbackText, setFallbackText] = useState<string | null>(null);
 
   function toggle(name: string) {
@@ -129,15 +140,25 @@ export function ShoppingList({ items, units = ["metric"], planId }: ShoppingList
       setCopyState("empty");
       return;
     }
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyText(text);
+    if (ok) {
       setCopyState("copied");
       setFallbackText(null);
-    } catch {
-      // Clipboard API unavailable (e.g. insecure context) — show the text to copy by hand.
+    } else {
+      // Neither clipboard path worked — show the text so it can be selected by hand.
+      setCopyState("failed");
       setFallbackText(text);
-      setCopyState("idle");
     }
+  }
+
+  function handleReminders() {
+    const text = buildShoppingText(items, checked, units);
+    if (!text) {
+      setCopyState("empty");
+      return;
+    }
+    // Deep-link into the user's Apple Shortcut, passing the list as input.
+    window.location.href = remindersShortcutUrl(text);
   }
 
   if (items.length === 0) {
@@ -165,15 +186,45 @@ export function ShoppingList({ items, units = ["metric"], planId }: ShoppingList
           >
             {copyState === "copied" ? "Copied ✓" : "Copy list"}
           </button>
-          <span className="shopping__copy-status" role="status" aria-live="polite">
-            {copyState === "copied" && "Copied unchecked items to your clipboard."}
-            {copyState === "empty" && "Everything's checked off — nothing to copy."}
-          </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--small"
+            onClick={handleReminders}
+          >
+            Add to Apple Reminders
+          </button>
         </div>
       </div>
+      <span className="shopping__copy-status" role="status" aria-live="polite">
+        {copyState === "copied" && "Copied unchecked items to your clipboard."}
+        {copyState === "failed" && "Couldn't reach the clipboard — copy the list below."}
+        {copyState === "empty" && "Everything's checked off — nothing to copy."}
+      </span>
       <p className="shopping__hint">
-        Check off what you already have — the copy leaves those out.
+        Check off what you already have — copy and Reminders both leave those out.
       </p>
+
+      {onHand.length > 0 && (
+        <p className="shopping__onhand" role="note">
+          Not listed — you said you already have: {onHand.join(", ")}.
+        </p>
+      )}
+
+      <details className="shopping__reminders-help">
+        <summary>Set up “Add to Apple Reminders” (one time)</summary>
+        <ol>
+          <li>
+            On your iPhone/Mac, open <strong>Shortcuts</strong> and create a new shortcut
+            named exactly <strong>“{REMINDERS_SHORTCUT_NAME}”</strong>.
+          </li>
+          <li>
+            Add <em>Split Text</em> (Shortcut Input, by <em>New Lines</em>), then{" "}
+            <em>Repeat with Each</em> → <em>Add New Reminder</em> using the repeat item,
+            into your grocery list.
+          </li>
+          <li>Back here, tap “Add to Apple Reminders” — each item becomes a reminder.</li>
+        </ol>
+      </details>
 
       {fallbackText !== null && (
         <div className="shopping__fallback">

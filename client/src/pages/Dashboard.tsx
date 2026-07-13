@@ -352,6 +352,7 @@ export function Dashboard({
         planId={bundle.plan.id}
         items={bundle.shopping}
         units={units}
+        onHand={bundle.plan.onHand}
       />
 
       {openMeal && (
