@@ -15,10 +15,10 @@ describe("remindersShortcutUrl", () => {
     expect(url).toContain(`text=${encodeURIComponent(list)}`);
   });
 
-  test("clipboard variant runs the named shortcut with input=clipboard", () => {
+  test("clipboard variant just launches the named shortcut (no input param)", () => {
     const url = remindersShortcutClipboardUrl("JElmer Test");
     expect(url).toBe(
-      `shortcuts://run-shortcut?name=${encodeURIComponent("JElmer Test")}&input=clipboard`,
+      `shortcuts://run-shortcut?name=${encodeURIComponent("JElmer Test")}`,
     );
   });
 });

@@ -21,13 +21,13 @@ export function remindersShortcutUrl(
 }
 
 /**
- * Run the shortcut reading the CLIPBOARD as its input (`input=clipboard`). More
- * robust than passing text in the URL — no length limit, no encoding surprises. The
- * app copies the list to the clipboard first; the shortcut splits Shortcut Input
- * (which, with input=clipboard, IS the clipboard contents).
+ * Just LAUNCH the shortcut by name — no `input` param. The app copies the list to the
+ * clipboard first; the shortcut reads it itself with a "Get Clipboard" action. This is
+ * the reliable path: the URL's `input=clipboard`/`input=text` params are flaky on macOS
+ * (e.g. `input=clipboard` passes the literal word "clipboard"), so we don't use them.
  */
 export function remindersShortcutClipboardUrl(
   shortcutName: string = REMINDERS_SHORTCUT_NAME,
 ): string {
-  return `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=clipboard`;
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}`;
 }

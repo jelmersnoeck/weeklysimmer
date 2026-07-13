@@ -239,31 +239,32 @@ export function ShoppingList({
       <details className="shopping__reminders-help">
         <summary>Set up “Add to Apple Reminders” (one time)</summary>
         <p className="shopping__reminders-note">
-          Important: where a step says a variable like <strong>Shortcut Input</strong> or{" "}
-          <strong>Repeat Item</strong>, you must <em>insert/select the variable</em>
+          Important: where a step names a variable (<strong>Clipboard</strong>,{" "}
+          <strong>Repeat Item</strong>), you must <em>insert/select the variable</em>
           (right-click or tap the field → pick it) — don’t type the words, or Shortcuts
           treats them as plain text and nothing flows through.
         </p>
         <ol>
           <li>
             On your iPhone/Mac, open <strong>Shortcuts</strong> and create a new shortcut.
-            Build these three actions, in order:
+            Build these actions, in order:
             <ul>
               <li>
+                <strong>Get Clipboard</strong> — the app copies the list here first, and
+                the shortcut reads it directly (more reliable than passing text in the URL).
+              </li>
+              <li>
                 <strong>Split Text</strong> — set its input to the{" "}
-                <strong>Shortcut Input</strong> variable, split by <em>New Lines</em>.
-                (This is the usual gotcha: if it splits an empty “Text” instead of{" "}
-                <em>Shortcut Input</em>, nothing gets added.)
+                <strong>Clipboard</strong> variable (from Get Clipboard), split by{" "}
+                <em>New Lines</em>.
               </li>
               <li>
                 <strong>Repeat with Each</strong> — item in <em>Split Text</em>.
               </li>
               <li>
-                Inside the repeat: <strong>Add New Reminder</strong> — tap the{" "}
-                <em>title</em> (the first blue chip, right after “Add”) and set it to the{" "}
-                <strong>Repeat Item</strong> variable; pick your grocery list. Leave the
-                alert as <strong>No Alert</strong> — putting the text in the “with” alert
-                field causes an “alert time invalid” error.
+                Inside the repeat: <strong>Add New Reminder</strong> — set the title (the
+                first blue chip after “Add”) to the <strong>Repeat Item</strong> variable;
+                pick your grocery list; leave the alert as <strong>No Alert</strong>.
               </li>
             </ul>
           </li>
@@ -280,10 +281,8 @@ export function ShoppingList({
             />
           </li>
           <li>
-            Back here, tap “Add to Apple Reminders”. The app copies the list and runs your
-            shortcut on the clipboard, so each line becomes its own reminder. (Your
-            shortcut still just splits <strong>Shortcut Input</strong> — with the clipboard
-            method that <em>is</em> the copied list.)
+            Back here, tap “Add to Apple Reminders”. The app copies the list and launches
+            your shortcut, which reads the clipboard — each line becomes its own reminder.
           </li>
         </ol>
       </details>
