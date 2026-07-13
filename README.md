@@ -10,6 +10,8 @@ shopping list, and dropping anything you already have.
 
 It runs locally (React + a small Node/SQLite backend that holds your Claude API key).
 
+![Weekly Simmer dashboard — a generated week and its shopping list](docs/images/weekly-simmer-dashboard.png)
+
 ## What it does
 
 - **Preference-driven.** A one-time setup captures your **household** (adults / children /
