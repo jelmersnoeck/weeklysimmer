@@ -246,8 +246,11 @@ export function ShoppingList({
                 <strong>Repeat with Each</strong> — item in <em>Split Text</em>.
               </li>
               <li>
-                Inside the repeat: <strong>Add New Reminder</strong> — set the reminder’s
-                title to <strong>Repeat Item</strong>, into your grocery list.
+                Inside the repeat: <strong>Add New Reminder</strong> — tap the{" "}
+                <em>title</em> (the first blue chip, right after “Add”) and set it to the{" "}
+                <strong>Repeat Item</strong> variable; pick your grocery list. Leave the
+                alert as <strong>No Alert</strong> — putting the text in the “with” alert
+                field causes an “alert time invalid” error.
               </li>
             </ul>
           </li>
