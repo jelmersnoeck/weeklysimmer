@@ -60,18 +60,14 @@ describe("buildShoppingText", () => {
     { name: "Milk", totalQuantity: 1, unit: "l", category: "dairy", checked: false },
   ];
 
-  test("groups unchecked items as plain text", () => {
+  test("is a flat list of unchecked items, one per line, no category headers", () => {
     const text = buildShoppingText(items, {}, ["metric"]);
-    expect(text).toBe(
-      ["Produce", "- Leek (2 pcs)", "- Potato (400 g)", "", "Dairy", "- Milk (1 l)"].join(
-        "\n",
-      ),
-    );
+    expect(text).toBe(["Leek (2 pcs)", "Potato (400 g)", "Milk (1 l)"].join("\n"));
   });
 
   test("omits checked-off items", () => {
     const text = buildShoppingText(items, { Potato: true, Milk: true }, ["metric"]);
-    expect(text).toBe(["Produce", "- Leek (2 pcs)"].join("\n"));
+    expect(text).toBe("Leek (2 pcs)");
   });
 
   test("returns empty string when everything is checked", () => {
@@ -106,5 +102,26 @@ describe("ShoppingList copy button", () => {
     expect(await screen.findByText(/copied ✓/i)).toBeInTheDocument();
 
     vi.unstubAllGlobals();
+  });
+});
+
+describe("ShoppingList persistence", () => {
+  const items: ShoppingItem[] = [
+    { name: "Leek", totalQuantity: 2, unit: "pcs", category: "produce", checked: false },
+  ];
+
+  test("remembers checked-off items across remounts via localStorage", async () => {
+    const user = userEvent.setup();
+    window.localStorage.clear();
+
+    const first = render(<ShoppingList items={items} planId={42} />);
+    await user.click(screen.getByRole("checkbox", { name: /leek/i }));
+    expect(screen.getByRole("checkbox", { name: /leek/i })).toBeChecked();
+    first.unmount();
+
+    // A fresh mount for the same plan reads the remembered state.
+    render(<ShoppingList items={items} planId={42} />);
+    expect(screen.getByRole("checkbox", { name: /leek/i })).toBeChecked();
+    window.localStorage.clear();
   });
 });

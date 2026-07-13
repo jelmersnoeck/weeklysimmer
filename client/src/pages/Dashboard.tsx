@@ -347,7 +347,12 @@ export function Dashboard({
         onHand={bundle.plan.onHand}
       />
 
-      <ShoppingList key={bundle.plan.id} items={bundle.shopping} units={units} />
+      <ShoppingList
+        key={bundle.plan.id}
+        planId={bundle.plan.id}
+        items={bundle.shopping}
+        units={units}
+      />
 
       {openMeal && (
         <div

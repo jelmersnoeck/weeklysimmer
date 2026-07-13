@@ -6,6 +6,33 @@ import "./ShoppingList.css";
 interface ShoppingListProps {
   items: ShoppingItem[];
   units?: MeasurementSystem[];
+  // Plan id, so the checked-off state can be remembered per plan across refreshes.
+  planId?: number;
+}
+
+function storageKey(planId?: number): string | null {
+  return planId == null ? null : `weeklysimmer:shopping:${planId}`;
+}
+
+function readChecked(planId?: number): Record<string, boolean> {
+  const key = storageKey(planId);
+  if (!key) return {};
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistChecked(planId: number | undefined, checked: Record<string, boolean>): void {
+  const key = storageKey(planId);
+  if (!key) return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(checked));
+  } catch {
+    // Storage unavailable/full — checked state just won't survive a refresh.
+  }
 }
 
 // Friendly, human-readable names for known shopping categories.
@@ -59,37 +86,39 @@ function itemQty(item: ShoppingItem, units: MeasurementSystem[]): string {
 }
 
 /**
- * Plain-text shopping list for pasting into another app — grouped by aisle, one
- * item per line as "- name (qty)". Only the items NOT checked off are included
- * (a checked item is one you already have / don't need to buy). Returns "" when
- * nothing remains.
+ * Plain-text shopping list for pasting into another app — a FLAT list, one item
+ * per line as "name (qty)" with no category headers (grocery apps categorize on
+ * their own). Only the items NOT checked off are included (a checked item is one
+ * you already have / don't need to buy). Returns "" when nothing remains.
  */
 export function buildShoppingText(
   items: ShoppingItem[],
   checked: Record<string, boolean>,
   units: MeasurementSystem[],
 ): string {
-  const remaining = items.filter((i) => !checked[i.name]);
-  if (remaining.length === 0) return "";
-  return groupByCategory(remaining)
-    .map(([category, group]) =>
-      [
-        prettyCategory(category),
-        ...group.map((i) => `- ${i.name} (${itemQty(i, units)})`),
-      ].join("\n"),
-    )
-    .join("\n\n");
+  return items
+    .filter((i) => !checked[i.name])
+    .map((i) => `${i.name} (${itemQty(i, units)})`)
+    .join("\n");
 }
 
-export function ShoppingList({ items, units = ["metric"] }: ShoppingListProps) {
-  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(items.map((i) => [i.name, i.checked])),
-  );
+export function ShoppingList({ items, units = ["metric"], planId }: ShoppingListProps) {
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    // Seed from the remembered per-plan state (localStorage), else the item defaults.
+    const remembered = readChecked(planId);
+    return Object.fromEntries(
+      items.map((i) => [i.name, remembered[i.name] ?? i.checked]),
+    );
+  });
   const [copyState, setCopyState] = useState<"idle" | "copied" | "empty">("idle");
   const [fallbackText, setFallbackText] = useState<string | null>(null);
 
   function toggle(name: string) {
-    setChecked((prev) => ({ ...prev, [name]: !prev[name] }));
+    setChecked((prev) => {
+      const next = { ...prev, [name]: !prev[name] };
+      persistChecked(planId, next);
+      return next;
+    });
     setCopyState("idle");
     setFallbackText(null);
   }
