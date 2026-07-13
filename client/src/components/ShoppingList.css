@@ -7,6 +7,53 @@
   font-size: 1.25rem;
 }
 
+.shopping__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.shopping__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.shopping__copy-status {
+  font-size: 0.8rem;
+  color: var(--ink-60);
+}
+
+.shopping__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-60);
+}
+
+.shopping__fallback {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.shopping__fallback-label {
+  font-size: 0.85rem;
+  color: var(--ink-60);
+}
+
+.shopping__fallback-text {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .shopping__empty {
   margin: 0;
   color: var(--ink-60);

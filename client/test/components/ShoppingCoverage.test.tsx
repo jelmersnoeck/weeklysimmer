@@ -1,8 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import type { ShoppingItem } from "../../src/types";
-import { ShoppingList } from "../../src/components/ShoppingList";
+import { ShoppingList, buildShoppingText } from "../../src/components/ShoppingList";
 
 describe("ShoppingList", () => {
   const items: ShoppingItem[] = [
@@ -50,5 +50,61 @@ describe("ShoppingList", () => {
     expect(leek).not.toBeChecked();
     await user.click(leek);
     expect(leek).toBeChecked();
+  });
+});
+
+describe("buildShoppingText", () => {
+  const items: ShoppingItem[] = [
+    { name: "Leek", totalQuantity: 2, unit: "pcs", category: "produce", checked: false },
+    { name: "Potato", totalQuantity: 400, unit: "g", category: "produce", checked: false },
+    { name: "Milk", totalQuantity: 1, unit: "l", category: "dairy", checked: false },
+  ];
+
+  test("groups unchecked items as plain text", () => {
+    const text = buildShoppingText(items, {}, ["metric"]);
+    expect(text).toBe(
+      ["Produce", "- Leek (2 pcs)", "- Potato (400 g)", "", "Dairy", "- Milk (1 l)"].join(
+        "\n",
+      ),
+    );
+  });
+
+  test("omits checked-off items", () => {
+    const text = buildShoppingText(items, { Potato: true, Milk: true }, ["metric"]);
+    expect(text).toBe(["Produce", "- Leek (2 pcs)"].join("\n"));
+  });
+
+  test("returns empty string when everything is checked", () => {
+    const text = buildShoppingText(
+      items,
+      { Leek: true, Potato: true, Milk: true },
+      ["metric"],
+    );
+    expect(text).toBe("");
+  });
+});
+
+describe("ShoppingList copy button", () => {
+  const items: ShoppingItem[] = [
+    { name: "Leek", totalQuantity: 2, unit: "pcs", category: "produce", checked: false },
+    { name: "Milk", totalQuantity: 1, unit: "l", category: "dairy", checked: false },
+  ];
+
+  test("copies the unchecked items to the clipboard", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+
+    render(<ShoppingList items={items} />);
+    await user.click(screen.getByRole("checkbox", { name: /milk/i }));
+    await user.click(screen.getByRole("button", { name: /copy list/i }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain("Leek");
+    expect(copied).not.toContain("Milk"); // checked off → excluded
+    expect(await screen.findByText(/copied ✓/i)).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });
