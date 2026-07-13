@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { getSettings } from "../db/settingsRepo.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
-import { buildShoppingList } from "../domain/shopping.js";
+import { buildShoppingList, excludeOnHand } from "../domain/shopping.js";
 import type {
   EnabledSlot,
   Meal,
@@ -91,7 +91,9 @@ export async function generatePlan(
   const rawShopping = buildShoppingList(meals);
   // LLM consolidation review: fold same-product lines together (falls back to the
   // un-consolidated list if the review fails — never breaks generation).
-  const shopping = await consolidateShopping(curator, rawShopping);
+  const consolidated = await consolidateShopping(curator, rawShopping);
+  // Drop anything the household already has on hand — those aren't things to buy.
+  const { toBuy } = excludeOnHand(consolidated, input.onHand);
 
-  return { plan, shopping };
+  return { plan, shopping: toBuy };
 }

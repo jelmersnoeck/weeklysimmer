@@ -147,13 +147,20 @@ describe("generatePlan", () => {
     const { shopping } = await generatePlan(db, curator, input);
 
     // Only the day-0 dinner is shopped; the day-1 lunch is leftovers of it, so its
-    // chicken/rice must NOT be added again. chicken: 150*3=450; rice: 60*3=180; carrots: 100*3=300.
+    // chicken/rice must NOT be added again. chicken: 150*3=450; rice: 60*3=180.
     const chicken = shopping.find((s) => s.name.toLowerCase() === "chicken breast")!;
     expect(chicken.totalQuantity).toBe(450);
     const rice = shopping.find((s) => s.name.toLowerCase() === "rice")!;
     expect(rice.totalQuantity).toBe(180);
-    const carrots = shopping.find((s) => s.name.toLowerCase() === "carrots")!;
-    expect(carrots.totalQuantity).toBe(300);
+  });
+
+  it("excludes on-hand foods a meal uses from the shopping list", async () => {
+    const { curator } = fakeCurator(cannedPlan);
+    // onHand includes "carrots"; the dinner uses carrots, so it must NOT be bought.
+    const { shopping } = await generatePlan(db, curator, input);
+    expect(shopping.some((s) => s.name.toLowerCase() === "carrots")).toBe(false);
+    // other ingredients are unaffected
+    expect(shopping.some((s) => s.name.toLowerCase() === "chicken breast")).toBe(true);
   });
 
   it("does not persist the plan", async () => {

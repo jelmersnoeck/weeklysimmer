@@ -11,7 +11,7 @@ import {
   getShoppingItems,
 } from "../db/plansRepo.js";
 import { householdServings, scaleIngredient } from "../domain/portions.js";
-import { buildShoppingList } from "../domain/shopping.js";
+import { buildShoppingList, excludeOnHand } from "../domain/shopping.js";
 import {
   SLOTS,
   enabledSlotsFromSchedule,
@@ -199,7 +199,9 @@ export function plansRouter(
 
     const updated = getPlan(db, id)!;
     const rawShopping = buildShoppingList(updated.meals);
-    const shopping = await consolidateShopping(deps.curator, rawShopping);
+    const consolidated = await consolidateShopping(deps.curator, rawShopping);
+    // Exclude foods the household already has on hand from the buy list.
+    const { toBuy: shopping } = excludeOnHand(consolidated, updated.onHand);
     saveShoppingItems(db, id, shopping);
 
     res.json({

@@ -153,6 +153,94 @@ export function buildShoppingList(meals: Meal[]): ShoppingItem[] {
 }
 
 /**
+ * Leading prep/variety adjectives that describe the SAME grocery item — stripping
+ * them lets "jasmine rice" or "baby spinach" match an on-hand "rice"/"spinach".
+ *
+ * Deliberately EXCLUDES words that make a genuinely DIFFERENT product: "brown"
+ * (brown rice), "red"/"green", "sweet" (sweet potato), "spring" (spring onion).
+ * Those must NOT be dropped, or we'd wrongly cross-off a distinct item.
+ */
+const ON_HAND_DESCRIPTORS = new Set([
+  "cooked",
+  "jasmine",
+  "white",
+  "basmati",
+  "fresh",
+  "chopped",
+  "grated",
+  "baby",
+  "canned",
+  "tinned",
+  "ground",
+  "minced",
+  "dried",
+  "frozen",
+  "raw",
+  "unsalted",
+  "salted",
+]);
+
+/** Lowercase, split on whitespace, singularize each token. */
+function normalizeTokens(name: string): string[] {
+  return name
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .map(singularize);
+}
+
+/**
+ * The head noun of a name: its singularized tokens with any leading prep/variety
+ * descriptors removed. "jasmine rice" -> "rice", "baby spinach" -> "spinach",
+ * "sweet potato" -> "sweet potato" (sweet is not a descriptor), "carrots" -> "carrot".
+ * Always keeps at least one token.
+ */
+function stripDescriptors(name: string): string {
+  const tokens = normalizeTokens(name);
+  while (tokens.length > 1 && ON_HAND_DESCRIPTORS.has(tokens[0])) tokens.shift();
+  return tokens.join(" ");
+}
+
+/**
+ * Does a shopping item match an on-hand term? Tolerant but conservative: both
+ * sides are lowercased, singularized, and have leading prep/variety descriptors
+ * stripped, then compared for EQUALITY. So "Carrots"↔"carrot" and "jasmine
+ * rice"↔"rice" match, but "sweet potato"↔"potato", "brown rice"↔"rice" and
+ * "spring onion"↔"onion" do NOT (those descriptors aren't stripped).
+ */
+export function matchesOnHand(itemName: string, term: string): boolean {
+  return stripDescriptors(itemName) === stripDescriptors(term);
+}
+
+/**
+ * Split a shopping list into what still needs buying vs. what the household already
+ * has. An item is EXCLUDED when its name matches any on-hand term (see matchesOnHand).
+ *
+ * @returns `toBuy` (items matching no on-hand term, order preserved) and
+ *   `alreadyHave` (the on-hand terms that matched at least one item — for the UI).
+ */
+export function excludeOnHand(
+  items: ShoppingItem[],
+  onHand: string[],
+): { toBuy: ShoppingItem[]; alreadyHave: string[] } {
+  const terms = onHand.map((t) => t.trim()).filter((t) => t.length > 0);
+  const toBuy: ShoppingItem[] = [];
+  const matched = new Set<string>();
+
+  for (const it of items) {
+    const term = terms.find((t) => matchesOnHand(it.name, t));
+    if (term === undefined) {
+      toBuy.push(it);
+    } else {
+      matched.add(term);
+    }
+  }
+
+  return { toBuy, alreadyHave: terms.filter((t) => matched.has(t)) };
+}
+
+/**
  * Re-merge an already-built shopping list after an LLM consolidation review.
  *
  * The LLM ONLY named things — for each item it returned a `canonical` grocery-product

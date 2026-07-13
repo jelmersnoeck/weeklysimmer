@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildShoppingList,
   consolidateShoppingList,
+  excludeOnHand,
 } from "../../src/domain/shopping.js";
 import type { Meal, Ingredient, ShoppingItem } from "../../src/domain/types.js";
 
@@ -279,5 +280,61 @@ describe("consolidateShoppingList", () => {
     ]);
     expect(result).toHaveLength(1);
     expect(result[0].totalQuantity).toBe(150);
+  });
+});
+
+describe("excludeOnHand", () => {
+  it("drops items the household already has, keeping the rest", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "Carrots", category: "produce" }),
+      item({ name: "rice", category: "bulk_staples" }),
+      item({ name: "chicken", category: "meat" }),
+    ];
+    // carrot↔carrots (singularize) and rice↔jasmine rice (descriptor strip)
+    const { toBuy, alreadyHave } = excludeOnHand(items, [
+      "carrots",
+      "jasmine rice",
+      "spinach",
+    ]);
+    expect(toBuy.map((i) => i.name)).toEqual(["chicken"]);
+    // only the two onHand terms that actually matched a line are reported
+    expect(alreadyHave.sort()).toEqual(["carrots", "jasmine rice"]);
+  });
+
+  it("matches singular/plural spellings both ways", () => {
+    const items: ShoppingItem[] = [item({ name: "carrots", category: "produce" })];
+    expect(excludeOnHand(items, ["carrot"]).toBuy).toHaveLength(0);
+    const items2: ShoppingItem[] = [item({ name: "carrot", category: "produce" })];
+    expect(excludeOnHand(items2, ["carrots"]).toBuy).toHaveLength(0);
+  });
+
+  it("strips known prep/variety descriptors so 'baby spinach' matches 'spinach'", () => {
+    const items: ShoppingItem[] = [item({ name: "baby spinach", category: "produce" })];
+    expect(excludeOnHand(items, ["spinach"]).toBuy).toHaveLength(0);
+  });
+
+  it("does NOT drop 'sweet potato' when only 'potato' is on hand", () => {
+    const items: ShoppingItem[] = [item({ name: "sweet potato", category: "produce" })];
+    const { toBuy } = excludeOnHand(items, ["potato"]);
+    expect(toBuy.map((i) => i.name)).toEqual(["sweet potato"]);
+  });
+
+  it("does NOT drop 'brown rice' when only 'rice' is on hand", () => {
+    const items: ShoppingItem[] = [item({ name: "brown rice", category: "bulk_staples" })];
+    const { toBuy } = excludeOnHand(items, ["rice"]);
+    expect(toBuy.map((i) => i.name)).toEqual(["brown rice"]);
+  });
+
+  it("does NOT drop 'spring onion' when only 'onion' is on hand", () => {
+    const items: ShoppingItem[] = [item({ name: "spring onion", category: "produce" })];
+    const { toBuy } = excludeOnHand(items, ["onion"]);
+    expect(toBuy.map((i) => i.name)).toEqual(["spring onion"]);
+  });
+
+  it("ignores blank onHand terms and returns everything to buy", () => {
+    const items: ShoppingItem[] = [item({ name: "chicken", category: "meat" })];
+    const { toBuy, alreadyHave } = excludeOnHand(items, ["", "  "]);
+    expect(toBuy).toHaveLength(1);
+    expect(alreadyHave).toHaveLength(0);
   });
 });

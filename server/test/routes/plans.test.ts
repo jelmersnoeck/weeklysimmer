@@ -465,6 +465,32 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
     db.close();
   });
 
+  it("excludes on-hand foods from the re-aggregated shopping list", async () => {
+    const { app, db } = makeApp();
+    // plan is on-hand "rice"; the regenerated dinner uses rice, so it must not be bought.
+    const created = await createPlan(app, { ...generateBody, onHand: ["rice"] });
+    const dinner = created.plan.meals.find(
+      (m: { slot: string }) => m.slot === "dinner",
+    );
+
+    const res = await request(app).post(
+      `/api/plans/${created.planId}/meals/${dinner.id}/regenerate`,
+    );
+    expect(res.status).toBe(200);
+    expect(
+      res.body.shopping.some(
+        (s: { name: string }) => s.name.toLowerCase() === "rice",
+      ),
+    ).toBe(false);
+    // the replacement's turkey is still on the buy list
+    expect(
+      res.body.shopping.some(
+        (s: { name: string }) => s.name.toLowerCase() === "turkey mince",
+      ),
+    ).toBe(true);
+    db.close();
+  });
+
   it("passes the target meal's protein class through to the curator", async () => {
     const { app, db, regenCalls } = makeApp();
     const created = await createPlan(app, generateBody);
