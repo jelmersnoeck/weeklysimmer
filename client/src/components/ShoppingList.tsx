@@ -2,7 +2,10 @@ import { useState } from "react";
 import type { MeasurementSystem, ShoppingItem } from "../types";
 import { formatQuantity } from "../lib/quantity";
 import { copyText } from "../lib/clipboard";
-import { remindersShortcutUrl, REMINDERS_SHORTCUT_NAME } from "../lib/reminders";
+import {
+  remindersShortcutClipboardUrl,
+  REMINDERS_SHORTCUT_NAME,
+} from "../lib/reminders";
 import "./ShoppingList.css";
 
 interface ShoppingListProps {
@@ -170,14 +173,18 @@ export function ShoppingList({
     }
   }
 
-  function handleReminders() {
+  async function handleReminders() {
     const text = buildShoppingText(items, checked, units);
     if (!text) {
       setCopyState("empty");
       return;
     }
-    // Deep-link into the user's Apple Shortcut (by their chosen name), passing the list.
-    window.location.href = remindersShortcutUrl(text, shortcutName.trim() || REMINDERS_SHORTCUT_NAME);
+    // Copy the list to the clipboard, then run the shortcut with input=clipboard — far
+    // more reliable than passing the list through the URL.
+    await copyText(text);
+    window.location.href = remindersShortcutClipboardUrl(
+      shortcutName.trim() || REMINDERS_SHORTCUT_NAME,
+    );
   }
 
   if (items.length === 0) {
@@ -266,7 +273,12 @@ export function ShoppingList({
               placeholder={REMINDERS_SHORTCUT_NAME}
             />
           </li>
-          <li>Back here, tap “Add to Apple Reminders” — each item becomes a reminder.</li>
+          <li>
+            Back here, tap “Add to Apple Reminders”. The app copies the list and runs your
+            shortcut on the clipboard, so each line becomes its own reminder. (Your
+            shortcut still just splits <strong>Shortcut Input</strong> — with the clipboard
+            method that <em>is</em> the copied list.)
+          </li>
         </ol>
       </details>
 
