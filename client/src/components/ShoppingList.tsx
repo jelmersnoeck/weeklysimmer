@@ -14,6 +14,8 @@ interface ShoppingListProps {
   onHand?: string[];
 }
 
+const SHORTCUT_NAME_KEY = "weeklysimmer:reminders-shortcut-name";
+
 function storageKey(planId?: number): string | null {
   return planId == null ? null : `weeklysimmer:shopping:${planId}`;
 }
@@ -123,6 +125,23 @@ export function ShoppingList({
     "idle",
   );
   const [fallbackText, setFallbackText] = useState<string | null>(null);
+  // The user's Apple Shortcut name — editable, since it must match exactly. Remembered.
+  const [shortcutName, setShortcutName] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem(SHORTCUT_NAME_KEY) || REMINDERS_SHORTCUT_NAME;
+    } catch {
+      return REMINDERS_SHORTCUT_NAME;
+    }
+  });
+
+  function updateShortcutName(name: string) {
+    setShortcutName(name);
+    try {
+      window.localStorage.setItem(SHORTCUT_NAME_KEY, name);
+    } catch {
+      // storage unavailable — the name just won't persist across refreshes
+    }
+  }
 
   function toggle(name: string) {
     setChecked((prev) => {
@@ -157,8 +176,8 @@ export function ShoppingList({
       setCopyState("empty");
       return;
     }
-    // Deep-link into the user's Apple Shortcut, passing the list as input.
-    window.location.href = remindersShortcutUrl(text);
+    // Deep-link into the user's Apple Shortcut (by their chosen name), passing the list.
+    window.location.href = remindersShortcutUrl(text, shortcutName.trim() || REMINDERS_SHORTCUT_NAME);
   }
 
   if (items.length === 0) {
@@ -214,13 +233,35 @@ export function ShoppingList({
         <summary>Set up “Add to Apple Reminders” (one time)</summary>
         <ol>
           <li>
-            On your iPhone/Mac, open <strong>Shortcuts</strong> and create a new shortcut
-            named exactly <strong>“{REMINDERS_SHORTCUT_NAME}”</strong>.
+            On your iPhone/Mac, open <strong>Shortcuts</strong> and create a new shortcut.
+            Build these three actions, in order:
+            <ul>
+              <li>
+                <strong>Split Text</strong> — set its input to the{" "}
+                <strong>Shortcut Input</strong> variable, split by <em>New Lines</em>.
+                (This is the usual gotcha: if it splits an empty “Text” instead of{" "}
+                <em>Shortcut Input</em>, nothing gets added.)
+              </li>
+              <li>
+                <strong>Repeat with Each</strong> — item in <em>Split Text</em>.
+              </li>
+              <li>
+                Inside the repeat: <strong>Add New Reminder</strong> — set the reminder’s
+                title to <strong>Repeat Item</strong>, into your grocery list.
+              </li>
+            </ul>
           </li>
           <li>
-            Add <em>Split Text</em> (Shortcut Input, by <em>New Lines</em>), then{" "}
-            <em>Repeat with Each</em> → <em>Add New Reminder</em> using the repeat item,
-            into your grocery list.
+            Enter your shortcut’s <strong>exact name</strong> here so the button can find
+            it:
+            <input
+              type="text"
+              className="shopping__shortcut-name"
+              aria-label="Apple Shortcut name"
+              value={shortcutName}
+              onChange={(e) => updateShortcutName(e.target.value)}
+              placeholder={REMINDERS_SHORTCUT_NAME}
+            />
           </li>
           <li>Back here, tap “Add to Apple Reminders” — each item becomes a reminder.</li>
         </ol>
