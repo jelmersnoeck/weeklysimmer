@@ -238,6 +238,12 @@ export function ShoppingList({
 
       <details className="shopping__reminders-help">
         <summary>Set up “Add to Apple Reminders” (one time)</summary>
+        <p className="shopping__reminders-note">
+          Important: where a step says a variable like <strong>Shortcut Input</strong> or{" "}
+          <strong>Repeat Item</strong>, you must <em>insert/select the variable</em>
+          (right-click or tap the field → pick it) — don’t type the words, or Shortcuts
+          treats them as plain text and nothing flows through.
+        </p>
         <ol>
           <li>
             On your iPhone/Mac, open <strong>Shortcuts</strong> and create a new shortcut.
