@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildShoppingList } from "../../src/domain/shopping.js";
-import type { Meal, Ingredient } from "../../src/domain/types.js";
+import {
+  buildShoppingList,
+  consolidateShoppingList,
+} from "../../src/domain/shopping.js";
+import type { Meal, Ingredient, ShoppingItem } from "../../src/domain/types.js";
 
 // Minimal meal factory — only ingredients matter for the shopping list.
 function meal(ingredients: Ingredient[], overrides: Partial<Meal> = {}): Meal {
@@ -168,5 +171,113 @@ describe("buildShoppingList", () => {
       "produce/apple",
       "produce/tomato",
     ]);
+  });
+});
+
+/** Terse ShoppingItem factory for consolidation tests. */
+function item(overrides: Partial<ShoppingItem> & { name: string }): ShoppingItem {
+  return {
+    totalQuantity: 100,
+    unit: "g",
+    category: "grains",
+    checked: false,
+    ...overrides,
+  };
+}
+
+describe("consolidateShoppingList", () => {
+  it("merges same-canonical lines and keeps distinct products separate", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "cooked rice", totalQuantity: 450, category: "bulk_staples" }),
+      item({ name: "jasmine rice", totalQuantity: 900, category: "bulk_staples" }),
+      item({ name: "brown rice", totalQuantity: 200, category: "bulk_staples" }),
+    ];
+    const mapping = [
+      { name: "cooked rice", canonical: "rice" },
+      { name: "jasmine rice", canonical: "rice" },
+      { name: "brown rice", canonical: "brown rice" },
+    ];
+
+    const result = consolidateShoppingList(items, mapping);
+
+    expect(result).toHaveLength(2);
+    const rice = result.find((i) => i.name === "rice")!;
+    expect(rice.totalQuantity).toBe(1350);
+    expect(rice.unit).toBe("g");
+    expect(rice.category).toBe("bulk_staples");
+    expect(rice.checked).toBe(false);
+    const brown = result.find((i) => i.name === "brown rice")!;
+    expect(brown.totalQuantity).toBe(200);
+  });
+
+  it("keeps an item's own name when it is absent from the mapping", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "rice", totalQuantity: 300, category: "bulk_staples" }),
+      item({ name: "chicken", totalQuantity: 400, category: "meat" }),
+    ];
+    // only rice is in the mapping; chicken must fall back to itself
+    const result = consolidateShoppingList(items, [
+      { name: "rice", canonical: "rice" },
+    ]);
+    expect(result.map((i) => i.name).sort()).toEqual(["chicken", "rice"]);
+    expect(result.find((i) => i.name === "chicken")!.totalQuantity).toBe(400);
+  });
+
+  it("re-merges convertible units in the base unit within a canonical group", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "cooked rice", totalQuantity: 1, unit: "kg", category: "bulk_staples" }),
+      item({ name: "jasmine rice", totalQuantity: 200, unit: "g", category: "bulk_staples" }),
+    ];
+    const result = consolidateShoppingList(items, [
+      { name: "cooked rice", canonical: "rice" },
+      { name: "jasmine rice", canonical: "rice" },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("rice");
+    expect(result[0].totalQuantity).toBe(1200);
+    expect(result[0].unit).toBe("g");
+  });
+
+  it("keeps incompatible units under one canonical as separate lines", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "minced garlic", totalQuantity: 3, unit: "clove", category: "produce" }),
+      item({ name: "garlic", totalQuantity: 10, unit: "g", category: "produce" }),
+    ];
+    const result = consolidateShoppingList(items, [
+      { name: "minced garlic", canonical: "garlic" },
+      { name: "garlic", canonical: "garlic" },
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result.every((i) => i.name === "garlic")).toBe(true);
+    expect(result.find((i) => i.unit === "clove")!.totalQuantity).toBe(3);
+    expect(result.find((i) => i.unit === "g")!.totalQuantity).toBe(10);
+  });
+
+  it("sums cupQuantity across merged lines sharing a cup unit", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "plain flour", totalQuantity: 120, unit: "g", category: "bulk_staples", cupQuantity: 1, cupUnit: "cup" }),
+      item({ name: "flour", totalQuantity: 60, unit: "g", category: "bulk_staples", cupQuantity: 0.5, cupUnit: "cup" }),
+    ];
+    const result = consolidateShoppingList(items, [
+      { name: "plain flour", canonical: "flour" },
+      { name: "flour", canonical: "flour" },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].totalQuantity).toBe(180);
+    expect(result[0].cupQuantity).toBe(1.5);
+    expect(result[0].cupUnit).toBe("cup");
+  });
+
+  it("matches item names case-insensitively against the mapping", () => {
+    const items: ShoppingItem[] = [
+      item({ name: "Cooked Rice", totalQuantity: 100, category: "bulk_staples" }),
+      item({ name: "jasmine rice", totalQuantity: 50, category: "bulk_staples" }),
+    ];
+    const result = consolidateShoppingList(items, [
+      { name: "cooked rice", canonical: "rice" },
+      { name: "jasmine rice", canonical: "rice" },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].totalQuantity).toBe(150);
   });
 });
