@@ -9,6 +9,7 @@ import type {
   WeeklyPlan,
 } from "../domain/types.js";
 import type { PlanCurator } from "./anthropicClient.js";
+import { consolidateShopping } from "./consolidation.js";
 import { log } from "../log.js";
 
 export interface GeneratePlanInput {
@@ -87,7 +88,10 @@ export async function generatePlan(
     meals,
   };
 
-  const shopping = buildShoppingList(meals);
+  const rawShopping = buildShoppingList(meals);
+  // LLM consolidation review: fold same-product lines together (falls back to the
+  // un-consolidated list if the review fails — never breaks generation).
+  const shopping = await consolidateShopping(curator, rawShopping);
 
   return { plan, shopping };
 }

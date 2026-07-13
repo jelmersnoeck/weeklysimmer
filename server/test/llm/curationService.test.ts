@@ -163,6 +163,52 @@ describe("generatePlan", () => {
     expect(row.n).toBe(0);
   });
 
+  it("runs the shopping list through LLM consolidation, merging same-canonical lines", async () => {
+    // Two meals name the same product differently → buildShoppingList keeps them apart,
+    // but a merging consolidation review folds them onto one canonical line.
+    const ricePlan: RawPlan = {
+      meals: [
+        {
+          ...cannedPlan.meals[0],
+          day: 0,
+          slot: "dinner",
+          leftoverOf: null,
+          ingredients: [{ name: "cooked rice", quantity: 60, unit: "g", category: "grains" }],
+        },
+        {
+          ...cannedPlan.meals[0],
+          day: 1,
+          slot: "dinner",
+          leftoverOf: null,
+          ingredients: [{ name: "jasmine rice", quantity: 60, unit: "g", category: "grains" }],
+        },
+      ],
+    };
+    const mergingCurator: PlanCurator = {
+      async curate() {
+        return ricePlan;
+      },
+      async regenerateMeal() {
+        throw new Error("not used");
+      },
+      async consolidateShopping(names) {
+        // both rice variants collapse to "rice"; anything else stays itself
+        return names.map((n) => ({
+          name: n,
+          canonical: n.toLowerCase().includes("rice") ? "rice" : n,
+        }));
+      },
+    };
+
+    const { shopping } = await generatePlan(db, mergingCurator, input);
+    const riceLines = shopping.filter((s) => s.name === "rice");
+    expect(riceLines).toHaveLength(1);
+    // 60*3 + 60*3 = 360 g merged onto the single canonical line
+    expect(riceLines[0].totalQuantity).toBe(360);
+    expect(shopping.some((s) => s.name === "cooked rice")).toBe(false);
+    expect(shopping.some((s) => s.name === "jasmine rice")).toBe(false);
+  });
+
   it("rejects a plan with two meals sharing the same day and slot", async () => {
     const dupPlan: RawPlan = {
       meals: [

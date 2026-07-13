@@ -19,6 +19,7 @@ import {
 import type { EnabledSlot, Meal, Slot } from "../domain/types.js";
 import type { RawMeal } from "../llm/planSchema.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
+import { consolidateShopping } from "../llm/consolidation.js";
 import type { JobStore } from "../jobs/registry.js";
 import { enqueueGeneration } from "../jobs/generation.js";
 
@@ -197,7 +198,8 @@ export function plansRouter(
     updateMeal(db, mealId, scaleRawMeal(rawMeal, servings));
 
     const updated = getPlan(db, id)!;
-    const shopping = buildShoppingList(updated.meals);
+    const rawShopping = buildShoppingList(updated.meals);
+    const shopping = await consolidateShopping(deps.curator, rawShopping);
     saveShoppingItems(db, id, shopping);
 
     res.json({
