@@ -2,12 +2,14 @@
 // Every call throws an Error carrying the server's { error } message on non-2xx.
 
 import type {
+  AdjustInput,
   DietConflict,
   GeneratePlanInput,
   GeneratePlanResult,
   Job,
   Options,
   PlanBundle,
+  PlanSnapshot,
   PlanSummary,
   Settings,
 } from "../types";
@@ -92,4 +94,19 @@ export function regenerateMeal(planId: number, mealId: number): Promise<PlanBund
   return request<PlanBundle>(`/api/plans/${planId}/meals/${mealId}/regenerate`, {
     method: "POST",
   });
+}
+
+// Kicks off a background mid-week adjustment; resolves to the job handle (202).
+export function adjustWeek(
+  planId: number,
+  input: AdjustInput,
+): Promise<{ jobId: string }> {
+  return request<{ jobId: string }>(`/api/plans/${planId}/adjust`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listSnapshots(planId: number): Promise<PlanSnapshot[]> {
+  return request<PlanSnapshot[]>(`/api/plans/${planId}/snapshots`);
 }

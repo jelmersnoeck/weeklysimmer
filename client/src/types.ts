@@ -160,7 +160,13 @@ export interface GeneratePlanResult {
 
 export type JobStatus = "running" | "done" | "error";
 
-// A background plan-generation job (GET /api/jobs, GET /api/jobs/:id).
+// The two-sided shopping diff a mid-week adjustment produces.
+export interface ShoppingDelta {
+  toBuy: ShoppingItem[];
+  leftover: ShoppingItem[];
+}
+
+// A background plan-generation OR adjustment job (GET /api/jobs, GET /api/jobs/:id).
 export interface Job {
   id: string;
   status: JobStatus;
@@ -168,4 +174,24 @@ export interface Job {
   error: string | null;
   weekStart: string;
   createdAt: string;
+  // Present on a completed adjustment job: what changed on the shopping list.
+  result?: ShoppingDelta | null;
+}
+
+// Body for POST /api/plans/:id/adjust — steer the rest of the week from a note.
+export interface AdjustInput {
+  note: string;
+  cutoffDay: number; // 0=Mon .. 6=Sun — first still-adjustable day
+  cutoffSlot: Slot; // first still-adjustable slot on the cutoff day
+}
+
+// A saved pre-adjustment snapshot (GET /api/plans/:id/snapshots).
+export interface PlanSnapshot {
+  id: number;
+  note: string;
+  cutoffDay: number;
+  cutoffSlot: Slot;
+  createdAt: string;
+  meals: Meal[];
+  shopping: ShoppingItem[];
 }
