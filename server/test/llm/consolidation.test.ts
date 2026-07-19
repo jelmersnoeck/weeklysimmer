@@ -26,6 +26,9 @@ function curatorWith(
     async regenerateMeal() {
       throw new Error("not used");
     },
+    async adjustWeek() {
+      throw new Error("not used");
+    },
     async consolidateShopping(names) {
       calls.push(names);
       return fn(names);

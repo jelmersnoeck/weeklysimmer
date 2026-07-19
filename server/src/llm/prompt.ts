@@ -282,6 +282,91 @@ ${otherTitles}
 Return the single meal as structured data matching the required schema.`;
 }
 
+export interface AdjustPromptInput {
+  settings: Settings;
+  note: string;
+  frozenMeals: Meal[];
+  futureMeals: Meal[];
+  onHand: string[];
+}
+
+/** Render a meal as one readable "Day slot — Title (proteinClass)" line. */
+function mealLine(m: Meal): string {
+  const dayName = DAY_NAMES[m.day] ?? `day ${m.day}`;
+  return `- ${dayName} ${m.slot} — ${m.title} (${m.proteinClass})`;
+}
+
+/**
+ * Build the (pure, no-network) prompt to ADJUST the rest of an in-progress week.
+ *
+ * The meals already eaten (`frozenMeals`) are fixed history: the model must NOT
+ * repeat or change them. It returns a CHANGE SET — replacement meals for the specific
+ * future cells the note implies changing, plus any cells to remove — and leaves every
+ * other future meal untouched. Deterministic code applies the change set afterwards.
+ */
+export function buildAdjustPrompt(input: AdjustPromptInput): string {
+  const { settings, note, frozenMeals, futureMeals, onHand } = input;
+
+  const servings = householdServings(settings.household);
+  const frozenList =
+    frozenMeals.length > 0
+      ? frozenMeals.map(mealLine).join("\n")
+      : "- (none yet)";
+  const futureList =
+    futureMeals.length > 0
+      ? futureMeals.map(mealLine).join("\n")
+      : "- (none)";
+  const onHandList =
+    onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
+  const dietLine =
+    settings.diets.length > 0 ? `\n${dietGuidance(settings)}` : "";
+
+  return `You are a meal-prep planner for a family household. The week is already in
+progress and the user wants to ADJUST the meals that are still to come.
+
+## What the household is asking for (apply this to the rest of the week)
+${note.trim().length > 0 ? note : "(no specific note — just refresh the remaining meals for variety)"}
+
+## Already eaten this week — FIXED, do NOT repeat and do NOT change these
+${frozenList}
+These meals have already been used. Never return a meal for any of these day/slot cells,
+and do not propose a replacement that repeats one of these dishes.
+
+## Current plan for the REST of the week (the meals you may change)
+${futureList}
+Only these upcoming cells may be changed. Change ONLY what the request above implies —
+keep every other upcoming meal exactly as it is (do not return it).
+
+## Foods to use up — prefer using them
+The household already has: ${onHandList}. Prefer recipes that help use these up.
+
+## Standing constraints (STRICT)
+Never use anything the household avoids: ${orNone(settings.avoid)}.${dietLine}
+Cuisines they enjoy: ${orNone(settings.cuisinesLiked)}. Flavours: ${orNone(settings.flavoursLiked)}.
+${proteinProfile(settings)}
+Keep the week's protein balance and variety. Cook for ${servings} servings per meal
+(the app scales quantities). Keep effort "${settings.effort}"; dinners are easy
+~30-minute weeknight meals (prepMinutes + cookMinutes ≲ 30). Snacks stay simple and
+mostly no-cook. If you change a dinner that a later lunch reused as leftovers, also
+update that lunch (set its "leftoverOf" accordingly) and include it in your changes.
+
+## Measurements
+${measurementGuidance(settings)}
+
+## Output — return a CHANGE SET only
+Return structured data with two arrays:
+- "changes": the full replacement meals for the future cells you are changing. Each is a
+  complete meal (day 0=Monday..6=Sunday, slot, title, ingredients PER SINGLE SERVING with
+  g/ml/piece units and a shopping "category", steps, prepMinutes, cookMinutes,
+  caloriesPerServing, proteinClass, sourceUrl from a real recipe found via web search).
+- "removals": any future cells to clear entirely (e.g. the household is eating out), each
+  as { "day": <0-6>, "slot": <slot> }.
+Include ONLY cells that actually change. Never target a cell from the "already eaten" list.
+Use the web search tool to find REAL recipes.
+
+Return the change set as structured data matching the required schema.`;
+}
+
 /**
  * Build the (pure, no-network) prompt for the shopping-list CONSOLIDATION REVIEW.
  *

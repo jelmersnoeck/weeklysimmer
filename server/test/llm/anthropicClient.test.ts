@@ -138,6 +138,47 @@ describe("createAnthropicCurator.regenerateMeal", () => {
   });
 });
 
+describe("createAnthropicCurator.adjustWeek", () => {
+  it("returns a typed change set and calls the client correctly", async () => {
+    const canned = {
+      changes: [validPlan.meals[0]],
+      removals: [{ day: 3, slot: "dinner" }],
+    };
+    const { client, calls } = fakeClient(canned);
+    const curator = createAnthropicCurator(client);
+
+    const result = await curator.adjustWeek({
+      settings,
+      note: "more veg",
+      frozenMeals: [],
+      futureMeals: [{ ...validPlan.meals[0], id: 1 }],
+      onHand: ["spinach"],
+    });
+
+    expect(result).toEqual(canned);
+    expect(calls).toHaveLength(1);
+    const params = calls[0];
+    expect(params.model).toBe("claude-opus-4-8");
+    expect(params.output_config).toBeTruthy();
+    const messages = params.messages as Array<{ role: string; content: string }>;
+    expect(messages[0].content).toContain("more veg");
+  });
+
+  it("throws when the change set is invalid", async () => {
+    const { client } = fakeClient({ changes: [{ bad: true }], removals: [] });
+    const curator = createAnthropicCurator(client);
+    await expect(
+      curator.adjustWeek({
+        settings,
+        note: "x",
+        frozenMeals: [],
+        futureMeals: [],
+        onHand: [],
+      }),
+    ).rejects.toThrow();
+  });
+});
+
 describe("createAnthropicCurator.consolidateShopping", () => {
   it("returns the parsed name→canonical mapping and passes the names to the client", async () => {
     const canned = {

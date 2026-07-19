@@ -43,6 +43,18 @@ export const rawMealSchema = z.object({
 export const planSchema = z.object({ meals: z.array(rawMealSchema).min(1) });
 
 /**
+ * A mid-week adjustment result: the LLM returns ONLY the cells it wants to change
+ * (`changes`, full replacement meals) plus cells to clear entirely (`removals`).
+ * Everything else in the week is left untouched. Both arrays may be empty.
+ */
+export const adjustResultSchema = z.object({
+  changes: z.array(rawMealSchema),
+  removals: z.array(
+    z.object({ day: z.number().int().min(0).max(6), slot: slotSchema }),
+  ),
+});
+
+/**
  * Shopping-list consolidation review: for EACH input item name the LLM returns a
  * `canonical` grocery-product name. Same-product items share a canonical (so code
  * can re-merge them); genuinely different products keep distinct canonicals.
@@ -53,4 +65,5 @@ export const consolidationSchema = z.object({
 
 export type RawMeal = z.infer<typeof rawMealSchema>;
 export type RawPlan = z.infer<typeof planSchema>;
+export type AdjustResult = z.infer<typeof adjustResultSchema>;
 export type Consolidation = z.infer<typeof consolidationSchema>;
