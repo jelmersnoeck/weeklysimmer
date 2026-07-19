@@ -262,5 +262,21 @@ export function plansRouter(
     res.json(listSnapshots(db, id));
   });
 
+  // Recalculate the shopping list from the plan's CURRENT meals — the same
+  // deterministic aggregation used after generation/regeneration, run on demand so a
+  // user can force the list back in sync with the menu. Synchronous (like regenerate).
+  router.post("/plans/:id/shopping/recompute", async (req, res) => {
+    const id = Number(req.params.id);
+    const plan = getPlan(db, id);
+    if (!plan) {
+      throw new HttpError(404, "plan not found");
+    }
+    const rawShopping = buildShoppingList(plan.meals);
+    const consolidated = await consolidateShopping(deps.curator, rawShopping);
+    const { toBuy: shopping } = excludeOnHand(consolidated, plan.onHand);
+    saveShoppingItems(db, id, shopping);
+    res.json({ shopping });
+  });
+
   return router;
 }

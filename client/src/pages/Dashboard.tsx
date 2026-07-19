@@ -17,6 +17,7 @@ import {
   getSettings,
   listJobs,
   listPlans,
+  recomputeShopping,
 } from "../api/client";
 import { AdjustWeekForm } from "../components/AdjustWeekForm";
 import { GeneratingPanel } from "../components/GeneratingPanel";
@@ -77,6 +78,7 @@ export function Dashboard({
   const [submitting, setSubmitting] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
   const [delta, setDelta] = useState<ShoppingDelta | null>(null);
   const [openMeal, setOpenMeal] = useState<Meal | null>(null);
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
@@ -249,6 +251,24 @@ export function Dashboard({
     }
   }
 
+  async function handleRecompute() {
+    if (!bundle) return;
+    setRecomputing(true);
+    setError(null);
+    try {
+      const { shopping } = await recomputeShopping(bundle.plan.id);
+      setBundle((prev) => (prev ? { ...prev, shopping } : prev));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not recalculate the shopping list.",
+      );
+    } finally {
+      setRecomputing(false);
+    }
+  }
+
   function handleRated(rating: number) {
     if (!openMeal) return;
     const mealId = openMeal.id;
@@ -403,6 +423,8 @@ export function Dashboard({
         items={bundle.shopping}
         units={units}
         onHand={bundle.plan.onHand}
+        onRecompute={handleRecompute}
+        recomputing={recomputing}
       />
 
       {bundle.plan.status === "active" && <PlanHistory planId={bundle.plan.id} />}

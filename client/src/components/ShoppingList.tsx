@@ -15,6 +15,10 @@ interface ShoppingListProps {
   planId?: number;
   // Foods the user said they already have; shown as a note (they're excluded from the list).
   onHand?: string[];
+  // Rebuild the list from the current menu; when absent the button is hidden.
+  onRecompute?: () => void | Promise<void>;
+  // Whether a recompute is in flight (disables the button + shows progress).
+  recomputing?: boolean;
 }
 
 const SHORTCUT_NAME_KEY = "weeklysimmer:reminders-shortcut-name";
@@ -116,6 +120,8 @@ export function ShoppingList({
   units = ["metric"],
   planId,
   onHand = [],
+  onRecompute,
+  recomputing = false,
 }: ShoppingListProps) {
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     // Seed from the remembered per-plan state (localStorage), else the item defaults.
@@ -205,6 +211,17 @@ export function ShoppingList({
       <div className="shopping__head">
         <h2 className="shopping__title">Shopping list</h2>
         <div className="shopping__actions">
+          {onRecompute && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              onClick={() => void onRecompute()}
+              disabled={recomputing}
+              title="Rebuild the shopping list from the current meals"
+            >
+              {recomputing ? "Recalculating…" : "Recalculate"}
+            </button>
+          )}
           <button
             type="button"
             className="btn btn--ghost btn--small"

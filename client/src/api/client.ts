@@ -12,11 +12,15 @@ import type {
   PlanSnapshot,
   PlanSummary,
   Settings,
+  ShoppingItem,
 } from "../types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+    // Never serve API responses from the HTTP cache — a plan's shopping list changes
+    // after adjustments/regenerations and the UI must always see the latest.
+    cache: "no-store",
     ...init,
   });
 
@@ -109,4 +113,14 @@ export function adjustWeek(
 
 export function listSnapshots(planId: number): Promise<PlanSnapshot[]> {
   return request<PlanSnapshot[]>(`/api/plans/${planId}/snapshots`);
+}
+
+// Recalculate the shopping list from the plan's current meals and return the fresh list.
+export function recomputeShopping(
+  planId: number,
+): Promise<{ shopping: ShoppingItem[] }> {
+  return request<{ shopping: ShoppingItem[] }>(
+    `/api/plans/${planId}/shopping/recompute`,
+    { method: "POST" },
+  );
 }

@@ -580,6 +580,24 @@ describe("POST /api/plans/:id/adjust", () => {
     db.close();
   });
 
+  it("refreshes the shopping list to match the adjusted menu", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    // The Monday dinner had chicken; the fake curator swaps it for turkey meatballs.
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "swap it", scope: { kind: "from", day: 0, slot: "breakfast" } });
+    const jobId = res.body.jobId as string;
+    await waitForJob(app, jobId);
+
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    const names = get.body.shopping.map((s: { name: string }) => s.name.toLowerCase());
+    // New ingredient present, the replaced one's chicken gone.
+    expect(names.some((n: string) => n.includes("turkey"))).toBe(true);
+    expect(names.some((n: string) => n.includes("chicken"))).toBe(false);
+    db.close();
+  });
+
   it("returns 400 for a bad scope", async () => {
     const { app, db } = makeApp();
     const created = await createPlan(app, generateBody);
@@ -607,6 +625,34 @@ describe("POST /api/plans/:id/adjust", () => {
     const res = await request(app)
       .post(`/api/plans/999/adjust`)
       .send({ note: "x", scope: { kind: "from", day: 0, slot: "breakfast" } });
+    expect(res.status).toBe(404);
+    db.close();
+  });
+});
+
+describe("POST /api/plans/:id/shopping/recompute", () => {
+  it("rebuilds the shopping list from the current meals and returns it", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+
+    const res = await request(app).post(
+      `/api/plans/${created.planId}/shopping/recompute`,
+    );
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.shopping)).toBe(true);
+    // The canned plan's dinner has chicken; it should be on the recomputed list.
+    const names = res.body.shopping.map((s: { name: string }) => s.name.toLowerCase());
+    expect(names.some((n: string) => n.includes("chicken"))).toBe(true);
+
+    // And it's persisted — a subsequent GET returns the same list.
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    expect(get.body.shopping).toHaveLength(res.body.shopping.length);
+    db.close();
+  });
+
+  it("returns 404 when the plan is missing", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app).post(`/api/plans/999/shopping/recompute`);
     expect(res.status).toBe(404);
     db.close();
   });
