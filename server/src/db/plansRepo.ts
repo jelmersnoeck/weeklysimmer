@@ -247,6 +247,119 @@ export function getShoppingItems(
   }));
 }
 
+/** Insert one meal into an existing plan and return its new id. */
+export function addMeal(
+  db: Database.Database,
+  planId: number,
+  meal: Meal
+): number {
+  const info = db
+    .prepare(
+      `INSERT INTO meals
+        (plan_id, day, slot, title, cuisine, protein_class, base, difficulty,
+         prep_minutes, cook_minutes, calories_per_serving, servings, ingredients,
+         steps, source_url, leftover_of, rating)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      planId,
+      meal.day,
+      meal.slot,
+      meal.title,
+      meal.cuisine,
+      meal.proteinClass,
+      meal.base,
+      meal.difficulty,
+      meal.prepMinutes ?? null,
+      meal.cookMinutes ?? null,
+      meal.caloriesPerServing ?? null,
+      meal.servings ?? 1,
+      JSON.stringify(meal.ingredients),
+      JSON.stringify(meal.steps),
+      meal.sourceUrl ?? null,
+      meal.leftoverOf ? JSON.stringify(meal.leftoverOf) : null,
+      meal.rating ?? null
+    );
+  return Number(info.lastInsertRowid);
+}
+
+/** Remove a single meal by id (used when an adjustment clears a slot). */
+export function deleteMeal(db: Database.Database, mealId: number): void {
+  db.prepare("DELETE FROM meals WHERE id = ?").run(mealId);
+}
+
+/** A saved pre-adjustment snapshot of a plan (its meals + shopping list). */
+export interface PlanSnapshot {
+  id: number;
+  note: string;
+  cutoffDay: number;
+  cutoffSlot: Slot;
+  createdAt: string;
+  meals: Meal[];
+  shopping: ShoppingItem[];
+}
+
+interface SnapshotRow {
+  id: number;
+  note: string;
+  cutoff_day: number;
+  cutoff_slot: Slot;
+  plan_json: string;
+  shopping_json: string;
+  created_at: string;
+}
+
+/** Record the plan's current meals + shopping before an adjustment overwrites them. */
+export function saveSnapshot(
+  db: Database.Database,
+  planId: number,
+  snapshot: {
+    note: string;
+    cutoffDay: number;
+    cutoffSlot: Slot;
+    meals: Meal[];
+    shopping: ShoppingItem[];
+  }
+): number {
+  const info = db
+    .prepare(
+      `INSERT INTO plan_snapshots
+        (plan_id, note, cutoff_day, cutoff_slot, plan_json, shopping_json)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      planId,
+      snapshot.note,
+      snapshot.cutoffDay,
+      snapshot.cutoffSlot,
+      JSON.stringify(snapshot.meals),
+      JSON.stringify(snapshot.shopping)
+    );
+  return Number(info.lastInsertRowid);
+}
+
+/** All snapshots for a plan, newest first. */
+export function listSnapshots(
+  db: Database.Database,
+  planId: number
+): PlanSnapshot[] {
+  const rows = db
+    .prepare(
+      "SELECT id, note, cutoff_day, cutoff_slot, plan_json, shopping_json, created_at FROM plan_snapshots WHERE plan_id = ? ORDER BY id DESC"
+    )
+    .all(planId) as SnapshotRow[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    note: r.note,
+    cutoffDay: r.cutoff_day,
+    cutoffSlot: r.cutoff_slot,
+    createdAt: r.created_at,
+    meals: JSON.parse(r.plan_json) as Meal[],
+    shopping: JSON.parse(r.shopping_json) as ShoppingItem[],
+  }));
+}
+
 function rowToMeal(row: MealRow): Meal {
   return {
     id: row.id,
