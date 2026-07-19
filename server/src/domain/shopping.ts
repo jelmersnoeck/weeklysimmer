@@ -254,6 +254,47 @@ export function excludeOnHand(
  *     the group; `checked` is false.
  *   - Sorted like buildShoppingList (category then name).
  */
+/**
+ * Diff two already-built buy lists (old plan vs new plan) into the two sides a
+ * mid-week adjustment shows: `toBuy` (quantities that went UP — new things to buy)
+ * and `leftover` (quantities that went DOWN — already-bought surplus no longer needed).
+ *
+ * Lines are matched by case-insensitive name + unit, so the two lists MUST share a
+ * consolidation mapping first (otherwise "jasmine rice" and "rice" wouldn't align).
+ * Only non-zero deltas produce a line; each line's `totalQuantity` is the difference.
+ * Sorted like the other builders (category then name).
+ */
+export function shoppingDelta(
+  oldItems: ShoppingItem[],
+  newItems: ShoppingItem[],
+): { toBuy: ShoppingItem[]; leftover: ShoppingItem[] } {
+  const key = (it: ShoppingItem): string =>
+    `${it.name.trim().toLowerCase()}|${it.unit.trim().toLowerCase()}`;
+
+  const oldByKey = new Map(oldItems.map((it) => [key(it), it]));
+  const newByKey = new Map(newItems.map((it) => [key(it), it]));
+
+  const toBuy: ShoppingItem[] = [];
+  const leftover: ShoppingItem[] = [];
+
+  for (const k of new Set([...oldByKey.keys(), ...newByKey.keys()])) {
+    const oldIt = oldByKey.get(k);
+    const newIt = newByKey.get(k);
+    const oldQty = oldIt?.totalQuantity ?? 0;
+    const newQty = newIt?.totalQuantity ?? 0;
+    const diff = newQty - oldQty;
+    if (diff > 0) {
+      // New side supplies the display fields for something we now need more of.
+      toBuy.push({ ...(newIt as ShoppingItem), totalQuantity: diff, checked: false });
+    } else if (diff < 0) {
+      // Old side supplies the display fields for surplus we no longer need.
+      leftover.push({ ...(oldIt as ShoppingItem), totalQuantity: -diff, checked: false });
+    }
+  }
+
+  return { toBuy: sortShoppingItems(toBuy), leftover: sortShoppingItems(leftover) };
+}
+
 export function consolidateShoppingList(
   items: ShoppingItem[],
   mapping: Array<{ name: string; canonical: string }>,
