@@ -15,6 +15,21 @@
   font-size: 1.4rem;
 }
 
+.dashboard__bar-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dashboard__modal {
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  width: 100%;
+  max-width: 600px;
+}
+
 .dashboard__eyebrow {
   margin: 0;
   font-size: 0.75rem;
