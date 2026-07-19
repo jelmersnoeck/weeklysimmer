@@ -201,4 +201,80 @@ describe("enqueueAdjustment", () => {
     expect(after.meals.find((m) => m.day === 0)!.title).toBe("Monday Salmon");
     db.close();
   });
+
+  it("lets a leftover meal that reuses a scoped day be updated too", async () => {
+    const db = openDb(":memory:");
+    saveSettings(db, makeSettings());
+    // Monday dinner cooked; Tuesday lunch is its leftover.
+    const planId = savePlan(db, {
+      weekStart: "2026-07-13",
+      onHand: [],
+      note: "",
+      status: "active",
+      meals: [
+        meal({
+          day: 0,
+          slot: "dinner",
+          title: "Monday Chicken",
+          ingredients: [{ name: "chicken", quantity: 150, unit: "g", category: "meat" }],
+        }),
+        meal({
+          day: 1,
+          slot: "lunch",
+          title: "Leftover Chicken Bowl",
+          leftoverOf: { day: 0, slot: "dinner" },
+        }),
+      ],
+    });
+
+    // Scope = Monday only. Claude swaps Monday's dinner AND refreshes Tuesday's
+    // leftover lunch (which reused it). The Tuesday change must be allowed through.
+    const curator: PlanCurator = {
+      async curate() {
+        throw new Error("not used");
+      },
+      async regenerateMeal() {
+        throw new Error("not used");
+      },
+      async adjustWeek() {
+        return {
+          changes: [
+            meal({
+              day: 0,
+              slot: "dinner",
+              title: "Monday Salmon",
+              ingredients: [{ name: "salmon", quantity: 150, unit: "g", category: "fish" }],
+            }),
+            meal({
+              day: 1,
+              slot: "lunch",
+              title: "Leftover Salmon Bowl",
+              leftoverOf: { day: 0, slot: "dinner" },
+            }),
+          ] as AdjustResult["changes"],
+          removals: [],
+        };
+      },
+      async consolidateShopping(names) {
+        return names.map((n) => ({ name: n, canonical: n }));
+      },
+    };
+
+    const { done } = enqueueAdjustment(
+      { db, curator, store: createJobStore() },
+      {
+        planId,
+        weekStart: "2026-07-13",
+        note: "make Monday salmon instead",
+        scope: { kind: "days", days: [0] },
+      },
+    );
+    await done;
+
+    const after = getPlan(db, planId)!;
+    expect(after.meals.find((m) => m.day === 0)!.title).toBe("Monday Salmon");
+    // The dependent Tuesday leftover was refreshed, not left as the stale chicken bowl.
+    expect(after.meals.find((m) => m.day === 1)!.title).toBe("Leftover Salmon Bowl");
+    db.close();
+  });
 });

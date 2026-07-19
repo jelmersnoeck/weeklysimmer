@@ -82,4 +82,24 @@ describe("partitionMeals", () => {
     expect(adjustable.map((m) => m.title)).toEqual(["Tue dinner", "Thu dinner"]);
     expect(fixed.map((m) => m.title)).toEqual(["Mon dinner", "Wed lunch"]);
   });
+
+  it("pulls a leftover meal that reuses a scoped day into the adjustable region", () => {
+    const withLeftover = [
+      meal(0, "dinner", "Mon dinner"),
+      // Tuesday lunch reuses Monday's dinner — a dependent of the scoped day.
+      { ...meal(1, "lunch", "Tue leftover"), leftoverOf: { day: 0, slot: "dinner" as const } },
+      meal(1, "dinner", "Tue dinner"),
+    ];
+    const { fixed, adjustable } = partitionMeals(withLeftover, {
+      kind: "days",
+      days: [0], // Monday only
+    });
+    // Monday (scoped) AND Tuesday's leftover-of-Monday are adjustable…
+    expect(adjustable.map((m) => m.title).sort()).toEqual([
+      "Mon dinner",
+      "Tue leftover",
+    ]);
+    // …but Tuesday's own dinner (not a dependent) stays fixed.
+    expect(fixed.map((m) => m.title)).toEqual(["Tue dinner"]);
+  });
 });

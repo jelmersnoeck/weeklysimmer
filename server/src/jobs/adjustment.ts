@@ -69,6 +69,14 @@ export function enqueueAdjustment(
       const scope = input.scope;
       const { fixed, adjustable } = partitionMeals(oldMeals, scope);
 
+      // A change/removal is allowed if its cell is in scope, OR it targets an existing
+      // adjustable meal (which includes leftover dependents pulled in by partitionMeals).
+      const adjustableCells = new Set(
+        adjustable.map((m) => `${m.day}:${m.slot}`),
+      );
+      const canChange = (day: number, slot: Meal["slot"]): boolean =>
+        isAdjustable(day, slot, scope) || adjustableCells.has(`${day}:${slot}`);
+
       const result = await curator.adjustWeek({
         settings,
         note: input.note,
@@ -92,7 +100,7 @@ export function enqueueAdjustment(
 
       // Removals — only the adjustable region; never touch a fixed cell.
       for (const r of result.removals) {
-        if (!isAdjustable(r.day, r.slot, scope)) {
+        if (!canChange(r.day, r.slot)) {
           log("adjust", `ignoring removal of out-of-scope cell ${r.day}/${r.slot}`);
           continue;
         }
@@ -106,7 +114,7 @@ export function enqueueAdjustment(
 
       // Changes — replace an existing adjustable cell in place, or add a new one.
       for (const c of result.changes) {
-        if (!isAdjustable(c.day, c.slot, scope)) {
+        if (!canChange(c.day, c.slot)) {
           log("adjust", `ignoring change to out-of-scope cell ${c.day}/${c.slot}`);
           continue;
         }

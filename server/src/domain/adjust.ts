@@ -37,20 +37,41 @@ export function isAdjustable(
   return cellOrdinal(day, slot) >= cellOrdinal(scope.day, scope.slot);
 }
 
+/** Stable key for a (day, slot) cell. */
+function cellKey(day: number, slot: Slot): string {
+  return `${day}:${slot}`;
+}
+
 /**
  * Split a week's meals into the fixed region (kept, never repeated) and the adjustable
- * region (the cells a directional note may change), using the scope. `fixed` is the
- * complement of the adjustable region.
+ * region (the cells a directional note may change), using the scope.
+ *
+ * The adjustable region also includes **leftover dependents**: a meal that reuses a
+ * scoped meal (its `leftoverOf` points at an in-scope cell) MUST be changeable too —
+ * otherwise editing e.g. Monday's dinner would strand Tuesday's "leftover of Monday"
+ * lunch as a stale reference the guard would refuse to update.
  */
 export function partitionMeals(
   meals: Meal[],
   scope: AdjustScope,
 ): { fixed: Meal[]; adjustable: Meal[] } {
+  const scopedCells = new Set(
+    meals
+      .filter((m) => isAdjustable(m.day, m.slot, scope))
+      .map((m) => cellKey(m.day, m.slot)),
+  );
+  const dependsOnScope = (m: Meal): boolean =>
+    m.leftoverOf != null &&
+    scopedCells.has(cellKey(m.leftoverOf.day, m.leftoverOf.slot));
+
   const fixed: Meal[] = [];
   const adjustable: Meal[] = [];
   for (const m of meals) {
-    if (isAdjustable(m.day, m.slot, scope)) adjustable.push(m);
-    else fixed.push(m);
+    if (isAdjustable(m.day, m.slot, scope) || dependsOnScope(m)) {
+      adjustable.push(m);
+    } else {
+      fixed.push(m);
+    }
   }
   return { fixed, adjustable };
 }

@@ -358,7 +358,10 @@ that repeats one of these dishes.
 ## The meals you MAY change
 ${adjustableList}
 Only these cells may be changed. Change ONLY what the request above implies — keep every
-other meal in this list exactly as it is (do not return it).
+other meal in this list exactly as it is (do not return it). Some of these may be
+leftover meals that REUSE a dish you are changing (their "leftoverOf" points at it) — if
+you change that source dish, you MUST also update the leftover meal to match, and include
+it in your changes so it never references a dish that no longer exists.
 
 ## Foods to use up — prefer using them
 The household already has: ${onHandList}. Prefer recipes that help use these up.
