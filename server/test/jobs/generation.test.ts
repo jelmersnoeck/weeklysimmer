@@ -41,6 +41,9 @@ function okCurator(): PlanCurator {
     async regenerateMeal() {
       throw new Error("not used");
     },
+    async adjustWeek() {
+      throw new Error("not used");
+    },
     async consolidateShopping(names) {
       return names.map((n) => ({ name: n, canonical: n }));
     },
@@ -53,6 +56,9 @@ function failingCurator(message: string): PlanCurator {
       throw new Error(message);
     },
     async regenerateMeal() {
+      throw new Error("not used");
+    },
+    async adjustWeek() {
       throw new Error("not used");
     },
     async consolidateShopping(names) {

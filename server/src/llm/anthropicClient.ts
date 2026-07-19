@@ -8,17 +8,21 @@ import type {
   ProteinClass,
   EnabledSlot,
 } from "../domain/types.js";
+import type { AdjustScope } from "../domain/adjust.js";
 import {
   buildCurationPrompt,
   buildRegeneratePrompt,
   buildConsolidationPrompt,
+  buildAdjustPrompt,
 } from "./prompt.js";
 import {
   planSchema,
   rawMealSchema,
   consolidationSchema,
+  adjustResultSchema,
   type RawPlan,
   type RawMeal,
+  type AdjustResult,
 } from "./planSchema.js";
 
 export interface CuratorInput {
@@ -40,11 +44,25 @@ export interface RegenerateMealInput {
   otherMeals: Meal[];
 }
 
+export interface AdjustWeekInput {
+  settings: Settings;
+  note: string;
+  scope: AdjustScope;
+  fixedMeals: Meal[];
+  adjustableMeals: Meal[];
+  onHand: string[];
+}
+
 /** Port: the app depends on this, not on the SDK directly. */
 export interface PlanCurator {
   curate(input: CuratorInput): Promise<RawPlan>;
   /** Produce a single replacement meal for one slot in an existing plan. */
   regenerateMeal(input: RegenerateMealInput): Promise<RawMeal>;
+  /**
+   * Adjust the still-to-come portion of an in-progress week from a directional
+   * note. Returns a change set (replacement meals + removals) for future cells only.
+   */
+  adjustWeek(input: AdjustWeekInput): Promise<AdjustResult>;
   /**
    * Review a built shopping list: for each item name, return a canonical
    * grocery-product name so code can re-merge same-product lines. The LLM ONLY
@@ -118,6 +136,9 @@ export function createAnthropicCurator(client: MinimalAnthropicClient): PlanCura
     },
     regenerateMeal(input: RegenerateMealInput): Promise<RawMeal> {
       return curateStructured(client, rawMealSchema, buildRegeneratePrompt(input), "regeneration");
+    },
+    adjustWeek(input: AdjustWeekInput): Promise<AdjustResult> {
+      return curateStructured(client, adjustResultSchema, buildAdjustPrompt(input), "adjustment");
     },
     async consolidateShopping(
       names: string[],

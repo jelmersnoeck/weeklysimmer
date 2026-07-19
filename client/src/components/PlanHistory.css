@@ -1,0 +1,66 @@
+.plan-history {
+  margin-top: var(--space-4);
+}
+
+.plan-history__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink-60);
+}
+
+.plan-history__toggle:hover {
+  color: var(--ink);
+}
+
+.plan-history__body {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.plan-history__muted {
+  margin: 0;
+  color: var(--ink-60);
+  font-size: 0.9rem;
+}
+
+.plan-history__item {
+  border-left: 2px solid var(--sage-line);
+  padding-left: var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.plan-history__item-head {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.plan-history__when {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.plan-history__cutoff {
+  color: var(--ink-60);
+  font-size: 0.85rem;
+}
+
+.plan-history__note {
+  margin: 0;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+.plan-history__meals {
+  margin: 0;
+  color: var(--ink-60);
+  font-size: 0.85rem;
+}

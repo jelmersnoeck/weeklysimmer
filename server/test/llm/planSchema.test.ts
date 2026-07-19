@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { planSchema, rawMealSchema } from "../../src/llm/planSchema.js";
+import {
+  planSchema,
+  rawMealSchema,
+  adjustResultSchema,
+} from "../../src/llm/planSchema.js";
 
 const validMeal = {
   day: 0,
@@ -143,5 +147,31 @@ describe("planSchema", () => {
 
   it("rejects an empty meals array", () => {
     expect(() => planSchema.parse({ meals: [] })).toThrow();
+  });
+});
+
+describe("adjustResultSchema", () => {
+  it("accepts a change set with replacements and removals", () => {
+    const parsed = adjustResultSchema.parse({
+      changes: [validMeal],
+      removals: [{ day: 3, slot: "dinner" }],
+    });
+    expect(parsed.changes).toHaveLength(1);
+    expect(parsed.removals).toEqual([{ day: 3, slot: "dinner" }]);
+  });
+
+  it("accepts empty change and removal arrays", () => {
+    const parsed = adjustResultSchema.parse({ changes: [], removals: [] });
+    expect(parsed.changes).toHaveLength(0);
+    expect(parsed.removals).toHaveLength(0);
+  });
+
+  it("rejects a removal with a bad slot", () => {
+    expect(() =>
+      adjustResultSchema.parse({
+        changes: [],
+        removals: [{ day: 0, slot: "brunch" }],
+      }),
+    ).toThrow();
   });
 });

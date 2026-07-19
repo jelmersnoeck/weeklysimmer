@@ -1,25 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  AdjustInput,
   GeneratePlanInput,
   Meal,
   MealSchedule,
   MeasurementSystem,
   PlanBundle,
   PlanSummary,
+  ShoppingDelta,
 } from "../types";
 import {
+  adjustWeek,
   generatePlan,
   getJob,
   getPlan,
   getSettings,
   listJobs,
   listPlans,
+  recomputeShopping,
 } from "../api/client";
+import { AdjustWeekForm } from "../components/AdjustWeekForm";
 import { GeneratingPanel } from "../components/GeneratingPanel";
 import { MealDetail } from "../components/MealDetail";
 import { NewWeekForm } from "../components/NewWeekForm";
+import { PlanHistory } from "../components/PlanHistory";
 import { ShoppingList } from "../components/ShoppingList";
 import { WeekGrid } from "../components/WeekGrid";
+import { WhatChanged } from "../components/WhatChanged";
 import { SLOT_ORDER } from "../lib/meal";
 import "./Dashboard.css";
 
@@ -69,6 +76,10 @@ export function Dashboard({
   const [recentTitles, setRecentTitles] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [adjustSubmitting, setAdjustSubmitting] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
+  const [delta, setDelta] = useState<ShoppingDelta | null>(null);
   const [openMeal, setOpenMeal] = useState<Meal | null>(null);
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [defaultSchedule, setDefaultSchedule] =
@@ -171,6 +182,8 @@ export function Dashboard({
           setStatus("ready");
           setError(null);
           setActiveJob(null);
+          // Adjustment jobs carry a shopping delta to show; generation jobs don't.
+          if (job.result) setDelta(job.result);
           onSelectPlanRef.current(job.planId);
           return;
         }
@@ -215,6 +228,44 @@ export function Dashboard({
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleAdjust(input: AdjustInput) {
+    if (!bundle) return;
+    setAdjustSubmitting(true);
+    setError(null);
+    try {
+      const { jobId } = await adjustWeek(bundle.plan.id, input);
+      setShowAdjust(false);
+      setDelta(null); // clear any prior delta while the new one is computed
+      setActiveJob({ id: jobId, startedAt: Date.now() });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not adjust the week. Try again.",
+      );
+    } finally {
+      setAdjustSubmitting(false);
+    }
+  }
+
+  async function handleRecompute() {
+    if (!bundle) return;
+    setRecomputing(true);
+    setError(null);
+    try {
+      const { shopping } = await recomputeShopping(bundle.plan.id);
+      setBundle((prev) => (prev ? { ...prev, shopping } : prev));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not recalculate the shopping list.",
+      );
+    } finally {
+      setRecomputing(false);
     }
   }
 
@@ -332,14 +383,33 @@ export function Dashboard({
             <p className="dashboard__note">{bundle.plan.note}</p>
           )}
         </div>
-        <button
-          type="button"
-          className="btn btn--primary"
-          onClick={() => setShowForm(true)}
-        >
-          New week
-        </button>
+        <div className="dashboard__bar-actions">
+          {bundle.plan.status === "active" && (
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => setShowAdjust(true)}
+            >
+              Adjust this week
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => setShowForm(true)}
+          >
+            New week
+          </button>
+        </div>
       </div>
+
+      {delta && (
+        <WhatChanged
+          delta={delta}
+          units={units}
+          onDismiss={() => setDelta(null)}
+        />
+      )}
 
       <WeekGrid
         plan={bundle.plan}
@@ -353,7 +423,29 @@ export function Dashboard({
         items={bundle.shopping}
         units={units}
         onHand={bundle.plan.onHand}
+        onRecompute={handleRecompute}
+        recomputing={recomputing}
       />
+
+      {bundle.plan.status === "active" && <PlanHistory planId={bundle.plan.id} />}
+
+      {showAdjust && (
+        <div
+          className="dashboard__overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAdjust(false);
+          }}
+        >
+          <div className="dashboard__modal">
+            <AdjustWeekForm
+              plan={bundle.plan}
+              onSubmit={handleAdjust}
+              onCancel={() => setShowAdjust(false)}
+              submitting={adjustSubmitting}
+            />
+          </div>
+        </div>
+      )}
 
       {openMeal && (
         <div

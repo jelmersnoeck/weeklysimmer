@@ -89,6 +89,10 @@ function fakeCurator(
       regenCalls.push(input);
       return replacementMeal;
     },
+    async adjustWeek() {
+      // Swap the Monday dinner for the turkey meatballs replacement, no removals.
+      return { changes: [replacementMeal], removals: [] };
+    },
     async consolidateShopping(names) {
       return names.map((n) => ({ name: n, canonical: n }));
     },
@@ -521,6 +525,134 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
     const res = await request(app).post(
       `/api/plans/${created.planId}/meals/99999/regenerate`,
     );
+    expect(res.status).toBe(404);
+    db.close();
+  });
+});
+
+describe("POST /api/plans/:id/adjust", () => {
+  it("kicks off an adjustment job, snapshots, and applies the change set", async () => {
+    const { app, db, store } = makeApp();
+    const created = await createPlan(app, generateBody);
+
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({
+        note: "more veg",
+        scope: { kind: "from", day: 0, slot: "breakfast" },
+      });
+    expect(res.status).toBe(202);
+    const jobId = res.body.jobId as string;
+    expect(typeof jobId).toBe("string");
+
+    const job = await waitForJob(app, jobId);
+    expect(job.status).toBe("done");
+    expect(job.planId).toBe(created.planId);
+
+    // Monday dinner was swapped for the replacement.
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    const dinner = get.body.plan.meals.find(
+      (m: { day: number; slot: string }) => m.day === 0 && m.slot === "dinner",
+    );
+    expect(dinner.title).toBe("Turkey Meatballs with Rice");
+
+    // A snapshot of the pre-adjustment plan is listable.
+    const snaps = await request(app).get(`/api/plans/${created.planId}/snapshots`);
+    expect(snaps.status).toBe(200);
+    expect(snaps.body).toHaveLength(1);
+    expect(snaps.body[0].note).toBe("more veg");
+
+    // The job carries a shopping delta.
+    const jobRes = await request(app).get(`/api/jobs/${jobId}`);
+    expect(jobRes.body.result).toBeTruthy();
+
+    db.close();
+    void store;
+  });
+
+  it("accepts a days-scoped adjustment", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "make Tuesday veg", scope: { kind: "days", days: [1] } });
+    expect(res.status).toBe(202);
+    db.close();
+  });
+
+  it("refreshes the shopping list to match the adjusted menu", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    // The Monday dinner had chicken; the fake curator swaps it for turkey meatballs.
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "swap it", scope: { kind: "from", day: 0, slot: "breakfast" } });
+    const jobId = res.body.jobId as string;
+    await waitForJob(app, jobId);
+
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    const names = get.body.shopping.map((s: { name: string }) => s.name.toLowerCase());
+    // New ingredient present, the replaced one's chicken gone.
+    expect(names.some((n: string) => n.includes("turkey"))).toBe(true);
+    expect(names.some((n: string) => n.includes("chicken"))).toBe(false);
+    db.close();
+  });
+
+  it("returns 400 for a bad scope", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    const badDay = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: { kind: "from", day: 9, slot: "breakfast" } });
+    expect(badDay.status).toBe(400);
+    const badSlot = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: { kind: "from", day: 0, slot: "brunch" } });
+    expect(badSlot.status).toBe(400);
+    const emptyDays = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: { kind: "days", days: [] } });
+    expect(emptyDays.status).toBe(400);
+    const noKind = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: {} });
+    expect(noKind.status).toBe(400);
+    db.close();
+  });
+
+  it("returns 404 when the plan is missing", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post(`/api/plans/999/adjust`)
+      .send({ note: "x", scope: { kind: "from", day: 0, slot: "breakfast" } });
+    expect(res.status).toBe(404);
+    db.close();
+  });
+});
+
+describe("POST /api/plans/:id/shopping/recompute", () => {
+  it("rebuilds the shopping list from the current meals and returns it", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+
+    const res = await request(app).post(
+      `/api/plans/${created.planId}/shopping/recompute`,
+    );
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.shopping)).toBe(true);
+    // The canned plan's dinner has chicken; it should be on the recomputed list.
+    const names = res.body.shopping.map((s: { name: string }) => s.name.toLowerCase());
+    expect(names.some((n: string) => n.includes("chicken"))).toBe(true);
+
+    // And it's persisted — a subsequent GET returns the same list.
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    expect(get.body.shopping).toHaveLength(res.body.shopping.length);
+    db.close();
+  });
+
+  it("returns 404 when the plan is missing", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app).post(`/api/plans/999/shopping/recompute`);
     expect(res.status).toBe(404);
     db.close();
   });

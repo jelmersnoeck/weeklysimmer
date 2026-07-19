@@ -3,6 +3,7 @@ import {
   buildShoppingList,
   consolidateShoppingList,
   excludeOnHand,
+  shoppingDelta,
 } from "../../src/domain/shopping.js";
 import type { Meal, Ingredient, ShoppingItem } from "../../src/domain/types.js";
 
@@ -336,5 +337,37 @@ describe("excludeOnHand", () => {
     const { toBuy, alreadyHave } = excludeOnHand(items, ["", "  "]);
     expect(toBuy).toHaveLength(1);
     expect(alreadyHave).toHaveLength(0);
+  });
+});
+
+describe("shoppingDelta", () => {
+  it("reports increases as toBuy and decreases as leftover", () => {
+    const oldItems: ShoppingItem[] = [
+      item({ name: "rice", unit: "g", totalQuantity: 200, category: "grains" }),
+      item({ name: "chicken", unit: "g", totalQuantity: 150, category: "meat" }),
+    ];
+    const newItems: ShoppingItem[] = [
+      item({ name: "rice", unit: "g", totalQuantity: 500, category: "grains" }),
+      item({ name: "tofu", unit: "g", totalQuantity: 300, category: "pantry" }),
+    ];
+
+    const { toBuy, leftover } = shoppingDelta(oldItems, newItems);
+
+    expect(toBuy).toEqual([
+      expect.objectContaining({ name: "rice", totalQuantity: 300, unit: "g" }),
+      expect.objectContaining({ name: "tofu", totalQuantity: 300, unit: "g" }),
+    ]);
+    expect(leftover).toEqual([
+      expect.objectContaining({ name: "chicken", totalQuantity: 150, unit: "g" }),
+    ]);
+  });
+
+  it("emits no line when a quantity is unchanged", () => {
+    const same: ShoppingItem[] = [
+      item({ name: "oats", unit: "g", totalQuantity: 100, category: "grains" }),
+    ];
+    const { toBuy, leftover } = shoppingDelta(same, same);
+    expect(toBuy).toHaveLength(0);
+    expect(leftover).toHaveLength(0);
   });
 });

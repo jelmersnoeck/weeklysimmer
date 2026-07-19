@@ -33,6 +33,18 @@ CREATE TABLE IF NOT EXISTS meals (
   rating INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS plan_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_id INTEGER NOT NULL REFERENCES weekly_plans(id) ON DELETE CASCADE,
+  note TEXT NOT NULL DEFAULT '',
+  cutoff_day INTEGER NOT NULL,
+  cutoff_slot TEXT NOT NULL,
+  scope_json TEXT NOT NULL DEFAULT '',
+  plan_json TEXT NOT NULL,
+  shopping_json TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS shopping_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   plan_id INTEGER NOT NULL REFERENCES weekly_plans(id) ON DELETE CASCADE,

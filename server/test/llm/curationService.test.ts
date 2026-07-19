@@ -61,6 +61,9 @@ function fakeCurator(plan: RawPlan): { curator: PlanCurator; calls: CuratorInput
     async regenerateMeal() {
       throw new Error("not used in generatePlan tests");
     },
+    async adjustWeek() {
+      throw new Error("not used in generatePlan tests");
+    },
     async consolidateShopping(names) {
       return names.map((n) => ({ name: n, canonical: n }));
     },
@@ -196,6 +199,9 @@ describe("generatePlan", () => {
         return ricePlan;
       },
       async regenerateMeal() {
+        throw new Error("not used");
+      },
+      async adjustWeek() {
         throw new Error("not used");
       },
       async consolidateShopping(names) {

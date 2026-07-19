@@ -8,6 +8,10 @@ import {
   updateMeal,
   saveShoppingItems,
   getShoppingItems,
+  addMeal,
+  deleteMeal,
+  saveSnapshot,
+  listSnapshots,
 } from "../../src/db/plansRepo.js";
 import type { WeeklyPlan, Meal, ShoppingItem } from "../../src/domain/types.js";
 
@@ -325,6 +329,64 @@ describe("plansRepo", () => {
     ]);
     const back = getShoppingItems(db, planId);
     expect(back.map((i) => i.name)).toEqual(["b"]);
+    db.close();
+  });
+
+  it("adds and deletes a single meal in place", () => {
+    const db = openDb(":memory:");
+    const planId = savePlan(db, samplePlan());
+    const before = getPlan(db, planId)!.meals.length;
+
+    const newMeal: Meal = {
+      day: 3,
+      slot: "dinner",
+      title: "Tofu Stir Fry",
+      cuisine: "asian",
+      proteinClass: "vegetarian",
+      base: "rice",
+      difficulty: "easy",
+      ingredients: [{ name: "tofu", quantity: 200, unit: "g", category: "pantry" }],
+      steps: ["Fry"],
+      leftoverOf: null,
+    };
+    const mealId = addMeal(db, planId, newMeal);
+    expect(getPlan(db, planId)!.meals).toHaveLength(before + 1);
+
+    deleteMeal(db, mealId);
+    expect(getPlan(db, planId)!.meals).toHaveLength(before);
+    db.close();
+  });
+
+  it("saves and lists plan snapshots newest first", () => {
+    const db = openDb(":memory:");
+    const planId = savePlan(db, samplePlan());
+    const plan = getPlan(db, planId)!;
+    const shopping: ShoppingItem[] = [
+      { name: "rice", totalQuantity: 200, unit: "g", category: "grains", checked: false },
+    ];
+
+    saveSnapshot(db, planId, {
+      note: "more veg",
+      scope: { kind: "from", day: 2, slot: "lunch" },
+      meals: plan.meals,
+      shopping,
+    });
+    saveSnapshot(db, planId, {
+      note: "just tuesday",
+      scope: { kind: "days", days: [1] },
+      meals: plan.meals,
+      shopping,
+    });
+
+    const snaps = listSnapshots(db, planId);
+    expect(snaps).toHaveLength(2);
+    // newest first — the days-scoped snapshot
+    expect(snaps[0].note).toBe("just tuesday");
+    expect(snaps[0].scope).toEqual({ kind: "days", days: [1] });
+    expect(snaps[1].note).toBe("more veg");
+    expect(snaps[1].scope).toEqual({ kind: "from", day: 2, slot: "lunch" });
+    expect(snaps[1].meals).toHaveLength(plan.meals.length);
+    expect(snaps[1].shopping).toEqual(shopping);
     db.close();
   });
 });

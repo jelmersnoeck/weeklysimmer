@@ -3,6 +3,7 @@ import {
   buildCurationPrompt,
   buildRegeneratePrompt,
   buildConsolidationPrompt,
+  buildAdjustPrompt,
 } from "../../src/llm/prompt.js";
 import {
   defaultMealSchedule,
@@ -334,5 +335,68 @@ describe("buildConsolidationPrompt", () => {
   it("is a non-trivial pure string", () => {
     expect(typeof prompt).toBe("string");
     expect(prompt.length).toBeGreaterThan(150);
+  });
+});
+
+describe("buildAdjustPrompt", () => {
+  const frozen: Meal = {
+    day: 0,
+    slot: "dinner",
+    title: "Monday Miso Salmon",
+    cuisine: "japanese",
+    proteinClass: "lean",
+    base: "rice",
+    difficulty: "easy",
+    ingredients: [{ name: "salmon", quantity: 150, unit: "g", category: "fish" }],
+    steps: ["Bake"],
+    leftoverOf: null,
+  };
+  const future: Meal = {
+    ...frozen,
+    day: 3,
+    title: "Thursday Beef Tacos",
+    proteinClass: "red_or_high_fat",
+  };
+  const prompt = buildAdjustPrompt({
+    settings,
+    note: "we're eating out Thursday, more veg after that",
+    scope: { kind: "from", day: 3, slot: "breakfast" },
+    fixedMeals: [frozen],
+    adjustableMeals: [future],
+    onHand: ["spinach"],
+  });
+
+  it("lists the fixed meal as do-not-repeat", () => {
+    expect(prompt).toContain("Monday Miso Salmon");
+    expect(prompt.toLowerCase()).toMatch(/do not repeat|already eaten/);
+  });
+
+  it("embeds the directional note", () => {
+    expect(prompt).toContain("we're eating out Thursday, more veg after that");
+  });
+
+  it("lists the adjustable meals it may change", () => {
+    expect(prompt).toContain("Thursday Beef Tacos");
+  });
+
+  it("asks for a change set with changes and removals", () => {
+    const lower = prompt.toLowerCase();
+    expect(lower).toContain("changes");
+    expect(lower).toContain("removals");
+  });
+
+  it("names the specific days for a days-scoped adjustment", () => {
+    const daysPrompt = buildAdjustPrompt({
+      settings,
+      note: "make it vegetarian",
+      scope: { kind: "days", days: [1, 3] },
+      fixedMeals: [frozen],
+      adjustableMeals: [{ ...future, day: 1, title: "Tuesday Beef Tacos" }],
+      onHand: [],
+    });
+    expect(daysPrompt).toContain("Tuesday");
+    expect(daysPrompt).toContain("Thursday");
+    // The rest of the week is framed as fixed, not "already eaten".
+    expect(daysPrompt.toLowerCase()).toContain("rest of the week");
   });
 });

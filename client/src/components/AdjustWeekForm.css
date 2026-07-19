@@ -1,0 +1,112 @@
+.adjust-week {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 560px;
+}
+
+.adjust-week__lead {
+  margin: 0;
+  color: var(--ink-60);
+  font-size: 0.95rem;
+}
+
+.adjust-week__modes {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--sage-tint, rgba(30, 42, 34, 0.05));
+  border-radius: var(--radius-md);
+  align-self: start;
+}
+
+.adjust-week__mode {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-60);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.adjust-week__mode.is-active {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(30, 42, 34, 0.12);
+}
+
+.adjust-week__days {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.adjust-week__day {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  min-width: 3rem;
+}
+
+.adjust-week__day.is-active {
+  background: var(--sage, #2f5d43);
+  border-color: var(--sage, #2f5d43);
+  color: var(--paper);
+}
+
+.adjust-week__optional {
+  font-weight: 400;
+  color: var(--ink-40);
+  font-size: 0.85rem;
+}
+
+.adjust-week__cutoff {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.adjust-week__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.adjust-week__field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.adjust-week__field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.adjust-week select,
+.adjust-week textarea {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--sage-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.adjust-week textarea {
+  resize: vertical;
+}
+
+.adjust-week__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

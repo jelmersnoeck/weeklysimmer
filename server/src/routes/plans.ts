@@ -9,19 +9,22 @@ import {
   updateMeal,
   saveShoppingItems,
   getShoppingItems,
+  listSnapshots,
 } from "../db/plansRepo.js";
-import { householdServings, scaleIngredient } from "../domain/portions.js";
+import { householdServings } from "../domain/portions.js";
 import { buildShoppingList, excludeOnHand } from "../domain/shopping.js";
 import {
   SLOTS,
   enabledSlotsFromSchedule,
 } from "../domain/schedule.js";
-import type { EnabledSlot, Meal, Slot } from "../domain/types.js";
-import type { RawMeal } from "../llm/planSchema.js";
+import type { EnabledSlot, Slot } from "../domain/types.js";
+import type { AdjustScope } from "../domain/adjust.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
+import { scaleRawMeal } from "../llm/curationService.js";
 import { consolidateShopping } from "../llm/consolidation.js";
 import type { JobStore } from "../jobs/registry.js";
 import { enqueueGeneration } from "../jobs/generation.js";
+import { enqueueAdjustment } from "../jobs/adjustment.js";
 
 /** An error carrying an HTTP status the error middleware turns into `{ error }`. */
 class HttpError extends Error {
@@ -32,25 +35,37 @@ class HttpError extends Error {
   }
 }
 
-/** Scale a raw (per-serving) meal up to household quantities. */
-function scaleRawMeal(raw: RawMeal, servings: number): Meal {
-  return {
-    day: raw.day,
-    slot: raw.slot,
-    title: raw.title,
-    cuisine: raw.cuisine,
-    proteinClass: raw.proteinClass,
-    base: raw.base,
-    difficulty: raw.difficulty,
-    prepMinutes: raw.prepMinutes,
-    cookMinutes: raw.cookMinutes,
-    caloriesPerServing: raw.caloriesPerServing,
-    servings,
-    ingredients: raw.ingredients.map((i) => scaleIngredient(i, servings)),
-    steps: raw.steps,
-    sourceUrl: raw.sourceUrl,
-    leftoverOf: raw.leftoverOf ?? null,
-  };
+/**
+ * Validate the adjust request's `scope` and narrow it to a typed AdjustScope, or throw
+ * a 400. `from` needs a valid (day, slot) cut-off; `days` needs a non-empty list of
+ * day indices 0-6.
+ */
+function parseScope(scope: unknown): AdjustScope {
+  if (typeof scope !== "object" || scope === null) {
+    throw new HttpError(400, "scope must be an object");
+  }
+  const s = scope as Record<string, unknown>;
+  if (s.kind === "from") {
+    if (!Number.isInteger(s.day) || (s.day as number) < 0 || (s.day as number) > 6) {
+      throw new HttpError(400, "scope.day must be an integer 0-6");
+    }
+    if (typeof s.slot !== "string" || !SLOTS.includes(s.slot as Slot)) {
+      throw new HttpError(400, "scope.slot must be a valid slot");
+    }
+    return { kind: "from", day: s.day as number, slot: s.slot as Slot };
+  }
+  if (s.kind === "days") {
+    const days = s.days;
+    if (
+      !Array.isArray(days) ||
+      days.length === 0 ||
+      !days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+    ) {
+      throw new HttpError(400, "scope.days must be a non-empty array of day indices 0-6");
+    }
+    return { kind: "days", days: days as number[] };
+  }
+  throw new HttpError(400, "scope.kind must be 'from' or 'days'");
 }
 
 /** Routes for weekly plans, meal ratings and single-meal regeneration. */
@@ -208,6 +223,59 @@ export function plansRouter(
       plan: updated,
       shopping,
     });
+  });
+
+  // Adjust the still-to-come portion of the current week from a directional note.
+  // Validation is synchronous (400/404/409); the LLM change-set + shopping diff run
+  // as a background job. Returns 202 with the job id to poll via GET /api/jobs/:id.
+  router.post("/plans/:id/adjust", (req, res) => {
+    const id = Number(req.params.id);
+    const plan = getPlan(db, id);
+    if (!plan) {
+      throw new HttpError(404, "plan not found");
+    }
+    if (plan.status !== "active") {
+      throw new HttpError(409, "only the active week can be adjusted");
+    }
+
+    const { note, scope } = req.body ?? {};
+
+    const { jobId } = enqueueAdjustment(
+      { db, curator: deps.curator, store: deps.store },
+      {
+        planId: id,
+        weekStart: plan.weekStart,
+        note: typeof note === "string" ? note : "",
+        scope: parseScope(scope),
+      },
+    );
+
+    res.status(202).json({ jobId });
+  });
+
+  // List the pre-adjustment snapshots saved for a plan (newest first).
+  router.get("/plans/:id/snapshots", (req, res) => {
+    const id = Number(req.params.id);
+    if (!getPlan(db, id)) {
+      throw new HttpError(404, "plan not found");
+    }
+    res.json(listSnapshots(db, id));
+  });
+
+  // Recalculate the shopping list from the plan's CURRENT meals — the same
+  // deterministic aggregation used after generation/regeneration, run on demand so a
+  // user can force the list back in sync with the menu. Synchronous (like regenerate).
+  router.post("/plans/:id/shopping/recompute", async (req, res) => {
+    const id = Number(req.params.id);
+    const plan = getPlan(db, id);
+    if (!plan) {
+      throw new HttpError(404, "plan not found");
+    }
+    const rawShopping = buildShoppingList(plan.meals);
+    const consolidated = await consolidateShopping(deps.curator, rawShopping);
+    const { toBuy: shopping } = excludeOnHand(consolidated, plan.onHand);
+    saveShoppingItems(db, id, shopping);
+    res.json({ shopping });
   });
 
   return router;

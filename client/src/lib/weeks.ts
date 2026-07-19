@@ -2,6 +2,8 @@
 // deals in Monday dates, so we snap here at the input boundary rather than accept
 // arbitrary dates and reason about partial weeks downstream.
 
+import type { Slot } from "../types";
+
 /** Local ISO date (YYYY-MM-DD) — timezone-safe (no UTC shift from toISOString). */
 export function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -50,4 +52,42 @@ export function upcomingWeekOptions(today: Date, count = 4): WeekOption[] {
     options.push({ weekStart: toISODate(monday), label: formatRange(monday, sunday) });
   }
   return options;
+}
+
+/**
+ * Where to draw the "already eaten vs still-to-come" line for a mid-week adjustment,
+ * inferred from the current date+time relative to the week's Monday. Everything BEFORE
+ * the returned (day, slot) is frozen; that cell and later are still adjustable.
+ *
+ * - Day index = whole days from `weekStart` (Monday) to `today`, clamped to 0–6.
+ *   Planning before the week even starts → the whole week is adjustable ({0,breakfast}).
+ * - Slot by local hour of day (documented defaults, easy to tune): a slot counts as
+ *   "still to come" from these times — <9 breakfast, <11 morning_snack, <14 lunch,
+ *   <17 afternoon_snack, otherwise dinner.
+ */
+export function defaultCutoff(
+  today: Date,
+  weekStart: string,
+): { day: number; slot: Slot } {
+  const monday = new Date(`${weekStart}T00:00:00`);
+  const start = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+  const now = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dayDiff = Math.floor((now.getTime() - start.getTime()) / 86_400_000);
+
+  if (dayDiff < 0) return { day: 0, slot: "breakfast" };
+  const day = Math.min(6, dayDiff);
+
+  const hour = today.getHours();
+  const slot: Slot =
+    hour < 9
+      ? "breakfast"
+      : hour < 11
+        ? "morning_snack"
+        : hour < 14
+          ? "lunch"
+          : hour < 17
+            ? "afternoon_snack"
+            : "dinner";
+
+  return { day, slot };
 }

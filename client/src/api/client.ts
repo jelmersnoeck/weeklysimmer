@@ -2,19 +2,25 @@
 // Every call throws an Error carrying the server's { error } message on non-2xx.
 
 import type {
+  AdjustInput,
   DietConflict,
   GeneratePlanInput,
   GeneratePlanResult,
   Job,
   Options,
   PlanBundle,
+  PlanSnapshot,
   PlanSummary,
   Settings,
+  ShoppingItem,
 } from "../types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+    // Never serve API responses from the HTTP cache — a plan's shopping list changes
+    // after adjustments/regenerations and the UI must always see the latest.
+    cache: "no-store",
     ...init,
   });
 
@@ -92,4 +98,29 @@ export function regenerateMeal(planId: number, mealId: number): Promise<PlanBund
   return request<PlanBundle>(`/api/plans/${planId}/meals/${mealId}/regenerate`, {
     method: "POST",
   });
+}
+
+// Kicks off a background mid-week adjustment; resolves to the job handle (202).
+export function adjustWeek(
+  planId: number,
+  input: AdjustInput,
+): Promise<{ jobId: string }> {
+  return request<{ jobId: string }>(`/api/plans/${planId}/adjust`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listSnapshots(planId: number): Promise<PlanSnapshot[]> {
+  return request<PlanSnapshot[]>(`/api/plans/${planId}/snapshots`);
+}
+
+// Recalculate the shopping list from the plan's current meals and return the fresh list.
+export function recomputeShopping(
+  planId: number,
+): Promise<{ shopping: ShoppingItem[] }> {
+  return request<{ shopping: ShoppingItem[] }>(
+    `/api/plans/${planId}/shopping/recompute`,
+    { method: "POST" },
+  );
 }

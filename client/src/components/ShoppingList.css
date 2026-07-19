@@ -107,8 +107,11 @@
 
 .shopping__aisles {
   display: grid;
-  gap: var(--space-6);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  /* One aisle per row: reads like a real shopping list and avoids the ragged
+     gaps that a multi-column auto-fit grid produces with uneven card heights. */
+  grid-template-columns: 1fr;
+  max-width: 640px;
 }
 
 .shopping__aisle {
