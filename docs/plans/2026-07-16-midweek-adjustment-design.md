@@ -1,5 +1,20 @@
 # Mid-week plan adjustment — design
 
+> **Update (2026-07-19): scoped adjustments.** The original design always re-planned
+> *from a cut-off to the end of the week*. Adjustments are now **scoped** by an
+> `AdjustScope`:
+> - `{ kind: "from", day, slot }` — the original cut-off behaviour.
+> - `{ kind: "days", days: number[] }` — change only the selected day(s); every other
+>   day is fixed context (kept, never repeated).
+>
+> The generalisation runs through the whole stack: `isAdjustable(day, slot, scope)` /
+> `partitionMeals(meals, scope)` in the domain, a scope-aware `buildAdjustPrompt`, the
+> job's apply-guard, the `POST /plans/:id/adjust` body (`{ note, scope }`), a
+> `scope_json` column on `plan_snapshots`, and a mode toggle ("Rest of the week" /
+> "Only these days") in the adjust form. The delta, snapshots and history are unchanged
+> — the adjustable region is simply smaller. Note is required for `from`, optional for
+> `days` (an empty note just re-rolls those days for variety).
+
 ## Problem
 
 Today the app supports two regeneration modes: full-week generation (a background
