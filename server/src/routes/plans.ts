@@ -9,6 +9,7 @@ import {
   updateMeal,
   saveShoppingItems,
   getShoppingItems,
+  listSnapshots,
 } from "../db/plansRepo.js";
 import { householdServings } from "../domain/portions.js";
 import { buildShoppingList, excludeOnHand } from "../domain/shopping.js";
@@ -22,6 +23,7 @@ import { scaleRawMeal } from "../llm/curationService.js";
 import { consolidateShopping } from "../llm/consolidation.js";
 import type { JobStore } from "../jobs/registry.js";
 import { enqueueGeneration } from "../jobs/generation.js";
+import { enqueueAdjustment } from "../jobs/adjustment.js";
 
 /** An error carrying an HTTP status the error middleware turns into `{ error }`. */
 class HttpError extends Error {
@@ -187,6 +189,50 @@ export function plansRouter(
       plan: updated,
       shopping,
     });
+  });
+
+  // Adjust the still-to-come portion of the current week from a directional note.
+  // Validation is synchronous (400/404/409); the LLM change-set + shopping diff run
+  // as a background job. Returns 202 with the job id to poll via GET /api/jobs/:id.
+  router.post("/plans/:id/adjust", (req, res) => {
+    const id = Number(req.params.id);
+    const plan = getPlan(db, id);
+    if (!plan) {
+      throw new HttpError(404, "plan not found");
+    }
+    if (plan.status !== "active") {
+      throw new HttpError(409, "only the active week can be adjusted");
+    }
+
+    const { note, cutoffDay, cutoffSlot } = req.body ?? {};
+    if (!Number.isInteger(cutoffDay) || cutoffDay < 0 || cutoffDay > 6) {
+      throw new HttpError(400, "cutoffDay must be an integer 0-6");
+    }
+    if (!SLOTS.includes(cutoffSlot)) {
+      throw new HttpError(400, "cutoffSlot must be a valid slot");
+    }
+
+    const { jobId } = enqueueAdjustment(
+      { db, curator: deps.curator, store: deps.store },
+      {
+        planId: id,
+        weekStart: plan.weekStart,
+        note: typeof note === "string" ? note : "",
+        cutoffDay,
+        cutoffSlot: cutoffSlot as Slot,
+      },
+    );
+
+    res.status(202).json({ jobId });
+  });
+
+  // List the pre-adjustment snapshots saved for a plan (newest first).
+  router.get("/plans/:id/snapshots", (req, res) => {
+    const id = Number(req.params.id);
+    if (!getPlan(db, id)) {
+      throw new HttpError(404, "plan not found");
+    }
+    res.json(listSnapshots(db, id));
   });
 
   return router;

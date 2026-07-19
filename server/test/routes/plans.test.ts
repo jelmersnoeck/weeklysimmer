@@ -90,7 +90,8 @@ function fakeCurator(
       return replacementMeal;
     },
     async adjustWeek() {
-      throw new Error("not used");
+      // Swap the Monday dinner for the turkey meatballs replacement, no removals.
+      return { changes: [replacementMeal], removals: [] };
     },
     async consolidateShopping(names) {
       return names.map((n) => ({ name: n, canonical: n }));
@@ -524,6 +525,67 @@ describe("POST /api/plans/:id/meals/:mealId/regenerate", () => {
     const res = await request(app).post(
       `/api/plans/${created.planId}/meals/99999/regenerate`,
     );
+    expect(res.status).toBe(404);
+    db.close();
+  });
+});
+
+describe("POST /api/plans/:id/adjust", () => {
+  it("kicks off an adjustment job, snapshots, and applies the change set", async () => {
+    const { app, db, store } = makeApp();
+    const created = await createPlan(app, generateBody);
+
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "more veg", cutoffDay: 0, cutoffSlot: "breakfast" });
+    expect(res.status).toBe(202);
+    const jobId = res.body.jobId as string;
+    expect(typeof jobId).toBe("string");
+
+    const job = await waitForJob(app, jobId);
+    expect(job.status).toBe("done");
+    expect(job.planId).toBe(created.planId);
+
+    // Monday dinner was swapped for the replacement.
+    const get = await request(app).get(`/api/plans/${created.planId}`);
+    const dinner = get.body.plan.meals.find(
+      (m: { day: number; slot: string }) => m.day === 0 && m.slot === "dinner",
+    );
+    expect(dinner.title).toBe("Turkey Meatballs with Rice");
+
+    // A snapshot of the pre-adjustment plan is listable.
+    const snaps = await request(app).get(`/api/plans/${created.planId}/snapshots`);
+    expect(snaps.status).toBe(200);
+    expect(snaps.body).toHaveLength(1);
+    expect(snaps.body[0].note).toBe("more veg");
+
+    // The job carries a shopping delta.
+    const jobRes = await request(app).get(`/api/jobs/${jobId}`);
+    expect(jobRes.body.result).toBeTruthy();
+
+    db.close();
+    void store;
+  });
+
+  it("returns 400 for a bad cutoff", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    const res = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", cutoffDay: 9, cutoffSlot: "breakfast" });
+    expect(res.status).toBe(400);
+    const res2 = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", cutoffDay: 0, cutoffSlot: "brunch" });
+    expect(res2.status).toBe(400);
+    db.close();
+  });
+
+  it("returns 404 when the plan is missing", async () => {
+    const { app, db } = makeApp();
+    const res = await request(app)
+      .post(`/api/plans/999/adjust`)
+      .send({ note: "x", cutoffDay: 0, cutoffSlot: "breakfast" });
     expect(res.status).toBe(404);
     db.close();
   });
