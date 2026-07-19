@@ -16,7 +16,7 @@ describe("job registry", () => {
     expect(store.getJob(job.id)).toEqual(job);
   });
 
-  it("markDone sets status and planId", () => {
+  it("markDone sets status and planId, leaving result null by default", () => {
     const store = createJobStore();
     const job = store.createJob("2026-07-13");
     store.markDone(job.id, 42);
@@ -24,6 +24,20 @@ describe("job registry", () => {
     expect(after.status).toBe("done");
     expect(after.planId).toBe(42);
     expect(after.error).toBeNull();
+    expect(after.result).toBeNull();
+  });
+
+  it("markDone stores an optional shopping delta result", () => {
+    const store = createJobStore();
+    const job = store.createJob("2026-07-13");
+    const delta = {
+      toBuy: [
+        { name: "tofu", totalQuantity: 300, unit: "g", category: "pantry", checked: false },
+      ],
+      leftover: [],
+    };
+    store.markDone(job.id, 7, delta);
+    expect(store.getJob(job.id)!.result).toEqual(delta);
   });
 
   it("markError sets status and error", () => {

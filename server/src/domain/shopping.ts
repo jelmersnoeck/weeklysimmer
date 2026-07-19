@@ -264,10 +264,16 @@ export function excludeOnHand(
  * Only non-zero deltas produce a line; each line's `totalQuantity` is the difference.
  * Sorted like the other builders (category then name).
  */
+/** The two-sided result of a mid-week adjustment's shopping diff. */
+export interface ShoppingDelta {
+  toBuy: ShoppingItem[];
+  leftover: ShoppingItem[];
+}
+
 export function shoppingDelta(
   oldItems: ShoppingItem[],
   newItems: ShoppingItem[],
-): { toBuy: ShoppingItem[]; leftover: ShoppingItem[] } {
+): ShoppingDelta {
   const key = (it: ShoppingItem): string =>
     `${it.name.trim().toLowerCase()}|${it.unit.trim().toLowerCase()}`;
 

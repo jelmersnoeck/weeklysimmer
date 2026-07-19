@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { ShoppingDelta } from "../domain/shopping.js";
 
 export type JobStatus = "running" | "done" | "error";
 
@@ -9,6 +10,12 @@ export interface Job {
   error: string | null;
   weekStart: string;
   createdAt: string;
+  /**
+   * Optional payload attached when the job settles. Generation jobs leave this
+   * null; an adjustment job stores its shopping delta here so the client can
+   * show what changed without a second request.
+   */
+  result: ShoppingDelta | null;
 }
 
 /**
@@ -20,7 +27,7 @@ export interface JobStore {
   createJob(weekStart: string): Job;
   getJob(id: string): Job | undefined;
   listJobs(): Job[];
-  markDone(id: string, planId: number): void;
+  markDone(id: string, planId: number, result?: ShoppingDelta): void;
   markError(id: string, message: string): void;
 }
 
@@ -39,6 +46,7 @@ export function createJobStore(): JobStore {
         error: null,
         weekStart,
         createdAt: new Date().toISOString(),
+        result: null,
       };
       jobs.set(job.id, job);
       return job;
@@ -49,11 +57,12 @@ export function createJobStore(): JobStore {
     listJobs() {
       return [...jobs.values()].reverse();
     },
-    markDone(id, planId) {
+    markDone(id, planId, result) {
       const job = jobs.get(id);
       if (!job) return;
       job.status = "done";
       job.planId = planId;
+      if (result !== undefined) job.result = result;
     },
     markError(id, message) {
       const job = jobs.get(id);
