@@ -7,6 +7,7 @@ import type {
 } from "../domain/types.js";
 import { SLOTS } from "../domain/schedule.js";
 import { householdServings } from "../domain/portions.js";
+import type { AdjustScope } from "../domain/adjust.js";
 
 const PROTEIN_CLASS_WORDS: Record<ProteinClass, string> = {
   lean: "lean protein",
@@ -285,8 +286,11 @@ Return the single meal as structured data matching the required schema.`;
 export interface AdjustPromptInput {
   settings: Settings;
   note: string;
-  frozenMeals: Meal[];
-  futureMeals: Meal[];
+  scope: AdjustScope;
+  /** Meals the model must keep and never repeat (everything outside the scope). */
+  fixedMeals: Meal[];
+  /** Meals inside the scope — the only cells the model may change. */
+  adjustableMeals: Meal[];
   onHand: string[];
 }
 
@@ -296,46 +300,65 @@ function mealLine(m: Meal): string {
   return `- ${dayName} ${m.slot} — ${m.title} (${m.proteinClass})`;
 }
 
+/** Human-readable description of which part of the week is being changed. */
+function scopeDescription(scope: AdjustScope): string {
+  if (scope.kind === "days") {
+    const names = scope.days.map((d) => DAY_NAMES[d] ?? `day ${d}`);
+    return names.length > 0 ? names.join(", ") : "(no days selected)";
+  }
+  const dayName = DAY_NAMES[scope.day] ?? `day ${scope.day}`;
+  return `${dayName} ${scope.slot} onward`;
+}
+
 /**
- * Build the (pure, no-network) prompt to ADJUST the rest of an in-progress week.
+ * Build the (pure, no-network) prompt to ADJUST part of an in-progress week.
  *
- * The meals already eaten (`frozenMeals`) are fixed history: the model must NOT
- * repeat or change them. It returns a CHANGE SET — replacement meals for the specific
- * future cells the note implies changing, plus any cells to remove — and leaves every
- * other future meal untouched. Deterministic code applies the change set afterwards.
+ * `fixedMeals` are the meals OUTSIDE the scope (already eaten, or days the user isn't
+ * touching): the model must NOT repeat or change them. It returns a CHANGE SET —
+ * replacement meals for the scoped cells the note implies changing, plus any cells to
+ * remove — and leaves every other meal untouched. Deterministic code applies it after.
  */
 export function buildAdjustPrompt(input: AdjustPromptInput): string {
-  const { settings, note, frozenMeals, futureMeals, onHand } = input;
+  const { settings, note, scope, fixedMeals, adjustableMeals, onHand } = input;
 
   const servings = householdServings(settings.household);
-  const frozenList =
-    frozenMeals.length > 0
-      ? frozenMeals.map(mealLine).join("\n")
-      : "- (none yet)";
-  const futureList =
-    futureMeals.length > 0
-      ? futureMeals.map(mealLine).join("\n")
+  const fixedList =
+    fixedMeals.length > 0
+      ? fixedMeals.map(mealLine).join("\n")
+      : "- (none)";
+  const adjustableList =
+    adjustableMeals.length > 0
+      ? adjustableMeals.map(mealLine).join("\n")
       : "- (none)";
   const onHandList =
     onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
   const dietLine =
     settings.diets.length > 0 ? `\n${dietGuidance(settings)}` : "";
 
-  return `You are a meal-prep planner for a family household. The week is already in
-progress and the user wants to ADJUST the meals that are still to come.
+  const scopeIntro =
+    scope.kind === "days"
+      ? `The user wants to change only specific days: ${scopeDescription(scope)}. Every other day stays exactly as planned.`
+      : `The week is already in progress; the user wants to change the meals from ${scopeDescription(scope)} (the meals before that are already eaten).`;
 
-## What the household is asking for (apply this to the rest of the week)
-${note.trim().length > 0 ? note : "(no specific note — just refresh the remaining meals for variety)"}
+  const fixedHeading =
+    scope.kind === "days"
+      ? "## The REST of the week — FIXED, do NOT repeat and do NOT change these"
+      : "## Already eaten this week — FIXED, do NOT repeat and do NOT change these";
 
-## Already eaten this week — FIXED, do NOT repeat and do NOT change these
-${frozenList}
-These meals have already been used. Never return a meal for any of these day/slot cells,
-and do not propose a replacement that repeats one of these dishes.
+  return `You are a meal-prep planner for a family household. ${scopeIntro}
 
-## Current plan for the REST of the week (the meals you may change)
-${futureList}
-Only these upcoming cells may be changed. Change ONLY what the request above implies —
-keep every other upcoming meal exactly as it is (do not return it).
+## What the household is asking for (apply this to the meals you may change)
+${note.trim().length > 0 ? note : "(no specific note — just refresh the changeable meals for variety)"}
+
+${fixedHeading}
+${fixedList}
+Never return a meal for any of these day/slot cells, and do not propose a replacement
+that repeats one of these dishes.
+
+## The meals you MAY change
+${adjustableList}
+Only these cells may be changed. Change ONLY what the request above implies — keep every
+other meal in this list exactly as it is (do not return it).
 
 ## Foods to use up — prefer using them
 The household already has: ${onHandList}. Prefer recipes that help use these up.
@@ -355,14 +378,14 @@ ${measurementGuidance(settings)}
 
 ## Output — return a CHANGE SET only
 Return structured data with two arrays:
-- "changes": the full replacement meals for the future cells you are changing. Each is a
+- "changes": the full replacement meals for the cells you are changing. Each is a
   complete meal (day 0=Monday..6=Sunday, slot, title, ingredients PER SINGLE SERVING with
   g/ml/piece units and a shopping "category", steps, prepMinutes, cookMinutes,
   caloriesPerServing, proteinClass, sourceUrl from a real recipe found via web search).
-- "removals": any future cells to clear entirely (e.g. the household is eating out), each
-  as { "day": <0-6>, "slot": <slot> }.
-Include ONLY cells that actually change. Never target a cell from the "already eaten" list.
-Use the web search tool to find REAL recipes.
+- "removals": any changeable cells to clear entirely (e.g. the household is eating out),
+  each as { "day": <0-6>, "slot": <slot> }.
+Include ONLY cells that actually change, and ONLY cells from "the meals you MAY change"
+above. Never target a fixed cell. Use the web search tool to find REAL recipes.
 
 Return the change set as structured data matching the required schema.`;
 }

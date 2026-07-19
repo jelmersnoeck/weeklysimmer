@@ -25,6 +25,9 @@ function migrate(db: Database.Database): void {
   addColumnIfMissing(db, "meals", "cook_minutes", "INTEGER");
   addColumnIfMissing(db, "meals", "calories_per_serving", "INTEGER");
   renameColumnIfNeeded(db, "weekly_plans", "veg_box", "on_hand");
+  // plan_snapshots grew a generic scope column (day-scoped adjustments); older rows
+  // that only have cutoff_day/cutoff_slot are read back as a "from" scope.
+  addColumnIfMissing(db, "plan_snapshots", "scope_json", "TEXT NOT NULL DEFAULT ''");
 }
 
 /**

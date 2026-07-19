@@ -5,6 +5,7 @@ import type {
   ShoppingItem,
   Slot,
 } from "../domain/types.js";
+import type { AdjustScope } from "../domain/adjust.js";
 
 const SLOT_ORDER: Record<Slot, number> = {
   breakfast: 0,
@@ -292,8 +293,7 @@ export function deleteMeal(db: Database.Database, mealId: number): void {
 export interface PlanSnapshot {
   id: number;
   note: string;
-  cutoffDay: number;
-  cutoffSlot: Slot;
+  scope: AdjustScope;
   createdAt: string;
   meals: Meal[];
   shopping: ShoppingItem[];
@@ -304,9 +304,17 @@ interface SnapshotRow {
   note: string;
   cutoff_day: number;
   cutoff_slot: Slot;
+  scope_json: string;
   plan_json: string;
   shopping_json: string;
   created_at: string;
+}
+
+/** Legacy cutoff columns are kept NOT NULL — derive sensible values from any scope. */
+function legacyCutoff(scope: AdjustScope): { day: number; slot: Slot } {
+  if (scope.kind === "from") return { day: scope.day, slot: scope.slot };
+  const day = scope.days.length > 0 ? Math.min(...scope.days) : 0;
+  return { day, slot: "breakfast" };
 }
 
 /** Record the plan's current meals + shopping before an adjustment overwrites them. */
@@ -315,23 +323,24 @@ export function saveSnapshot(
   planId: number,
   snapshot: {
     note: string;
-    cutoffDay: number;
-    cutoffSlot: Slot;
+    scope: AdjustScope;
     meals: Meal[];
     shopping: ShoppingItem[];
   }
 ): number {
+  const cutoff = legacyCutoff(snapshot.scope);
   const info = db
     .prepare(
       `INSERT INTO plan_snapshots
-        (plan_id, note, cutoff_day, cutoff_slot, plan_json, shopping_json)
-       VALUES (?, ?, ?, ?, ?, ?)`
+        (plan_id, note, cutoff_day, cutoff_slot, scope_json, plan_json, shopping_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       planId,
       snapshot.note,
-      snapshot.cutoffDay,
-      snapshot.cutoffSlot,
+      cutoff.day,
+      cutoff.slot,
+      JSON.stringify(snapshot.scope),
       JSON.stringify(snapshot.meals),
       JSON.stringify(snapshot.shopping)
     );
@@ -345,19 +354,24 @@ export function listSnapshots(
 ): PlanSnapshot[] {
   const rows = db
     .prepare(
-      "SELECT id, note, cutoff_day, cutoff_slot, plan_json, shopping_json, created_at FROM plan_snapshots WHERE plan_id = ? ORDER BY id DESC"
+      "SELECT id, note, cutoff_day, cutoff_slot, scope_json, plan_json, shopping_json, created_at FROM plan_snapshots WHERE plan_id = ? ORDER BY id DESC"
     )
     .all(planId) as SnapshotRow[];
 
-  return rows.map((r) => ({
-    id: r.id,
-    note: r.note,
-    cutoffDay: r.cutoff_day,
-    cutoffSlot: r.cutoff_slot,
-    createdAt: r.created_at,
-    meals: JSON.parse(r.plan_json) as Meal[],
-    shopping: JSON.parse(r.shopping_json) as ShoppingItem[],
-  }));
+  return rows.map((r) => {
+    // Newer rows store the full scope; older rows only have the cutoff columns.
+    const scope: AdjustScope = r.scope_json
+      ? (JSON.parse(r.scope_json) as AdjustScope)
+      : { kind: "from", day: r.cutoff_day, slot: r.cutoff_slot };
+    return {
+      id: r.id,
+      note: r.note,
+      scope,
+      createdAt: r.created_at,
+      meals: JSON.parse(r.plan_json) as Meal[],
+      shopping: JSON.parse(r.shopping_json) as ShoppingItem[],
+    };
+  });
 }
 
 function rowToMeal(row: MealRow): Meal {

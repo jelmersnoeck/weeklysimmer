@@ -1,11 +1,18 @@
 import type { Meal, Slot } from "./types.js";
 import { SLOTS } from "./schedule.js";
 
-/** A freeze boundary: everything strictly before this (day, slot) is frozen. */
-export interface Cutoff {
-  day: number;
-  slot: Slot;
-}
+/**
+ * Which meals a mid-week adjustment is allowed to change. Everything NOT in the
+ * adjustable region is treated as fixed context — the LLM keeps it and won't repeat it.
+ *
+ * - `from`: a time-based cut-off — everything at or after the (day, slot) cell is
+ *   adjustable, the earlier meals are frozen ("already eaten").
+ * - `days`: only the listed day indices (0=Mon..6=Sun) are adjustable; every other day
+ *   stays fixed. Used to edit specific days like "just Tuesday".
+ */
+export type AdjustScope =
+  | { kind: "from"; day: number; slot: Slot }
+  | { kind: "days"; days: number[] };
 
 /** Position of a slot within a day (breakfast=0 … dinner=4). */
 export function slotOrdinal(slot: Slot): number {
@@ -13,32 +20,37 @@ export function slotOrdinal(slot: Slot): number {
 }
 
 /**
- * A single comparable ordinal for a (day, slot) cell, so "is this cell before the
- * cutoff?" is one numeric comparison. Slots span 0–4, so `day * 10` keeps days apart.
+ * A single comparable ordinal for a (day, slot) cell, so cut-off comparisons are one
+ * numeric check. Slots span 0–4, so `day * 10` keeps days apart.
  */
 export function cellOrdinal(day: number, slot: Slot): number {
   return day * 10 + slotOrdinal(slot);
 }
 
-/** A cell is frozen when it sits strictly BEFORE the cutoff cell. */
-export function isFrozen(day: number, slot: Slot, cutoff: Cutoff): boolean {
-  return cellOrdinal(day, slot) < cellOrdinal(cutoff.day, cutoff.slot);
+/** Whether a (day, slot) cell falls inside the scope's adjustable region. */
+export function isAdjustable(
+  day: number,
+  slot: Slot,
+  scope: AdjustScope,
+): boolean {
+  if (scope.kind === "days") return scope.days.includes(day);
+  return cellOrdinal(day, slot) >= cellOrdinal(scope.day, scope.slot);
 }
 
 /**
- * Split a week's meals into the frozen (already-eaten) region and the adjustable
- * (still-to-come) region, using the cutoff. Frozen meals are left untouched by an
- * adjustment; adjustable meals are the ones a directional note may change.
+ * Split a week's meals into the fixed region (kept, never repeated) and the adjustable
+ * region (the cells a directional note may change), using the scope. `fixed` is the
+ * complement of the adjustable region.
  */
 export function partitionMeals(
   meals: Meal[],
-  cutoff: Cutoff,
-): { frozen: Meal[]; adjustable: Meal[] } {
-  const frozen: Meal[] = [];
+  scope: AdjustScope,
+): { fixed: Meal[]; adjustable: Meal[] } {
+  const fixed: Meal[] = [];
   const adjustable: Meal[] = [];
   for (const m of meals) {
-    if (isFrozen(m.day, m.slot, cutoff)) frozen.push(m);
-    else adjustable.push(m);
+    if (isAdjustable(m.day, m.slot, scope)) adjustable.push(m);
+    else fixed.push(m);
   }
-  return { frozen, adjustable };
+  return { fixed, adjustable };
 }

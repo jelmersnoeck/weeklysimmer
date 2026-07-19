@@ -537,7 +537,10 @@ describe("POST /api/plans/:id/adjust", () => {
 
     const res = await request(app)
       .post(`/api/plans/${created.planId}/adjust`)
-      .send({ note: "more veg", cutoffDay: 0, cutoffSlot: "breakfast" });
+      .send({
+        note: "more veg",
+        scope: { kind: "from", day: 0, slot: "breakfast" },
+      });
     expect(res.status).toBe(202);
     const jobId = res.body.jobId as string;
     expect(typeof jobId).toBe("string");
@@ -567,17 +570,35 @@ describe("POST /api/plans/:id/adjust", () => {
     void store;
   });
 
-  it("returns 400 for a bad cutoff", async () => {
+  it("accepts a days-scoped adjustment", async () => {
     const { app, db } = makeApp();
     const created = await createPlan(app, generateBody);
     const res = await request(app)
       .post(`/api/plans/${created.planId}/adjust`)
-      .send({ note: "x", cutoffDay: 9, cutoffSlot: "breakfast" });
-    expect(res.status).toBe(400);
-    const res2 = await request(app)
+      .send({ note: "make Tuesday veg", scope: { kind: "days", days: [1] } });
+    expect(res.status).toBe(202);
+    db.close();
+  });
+
+  it("returns 400 for a bad scope", async () => {
+    const { app, db } = makeApp();
+    const created = await createPlan(app, generateBody);
+    const badDay = await request(app)
       .post(`/api/plans/${created.planId}/adjust`)
-      .send({ note: "x", cutoffDay: 0, cutoffSlot: "brunch" });
-    expect(res2.status).toBe(400);
+      .send({ note: "x", scope: { kind: "from", day: 9, slot: "breakfast" } });
+    expect(badDay.status).toBe(400);
+    const badSlot = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: { kind: "from", day: 0, slot: "brunch" } });
+    expect(badSlot.status).toBe(400);
+    const emptyDays = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: { kind: "days", days: [] } });
+    expect(emptyDays.status).toBe(400);
+    const noKind = await request(app)
+      .post(`/api/plans/${created.planId}/adjust`)
+      .send({ note: "x", scope: {} });
+    expect(noKind.status).toBe(400);
     db.close();
   });
 
@@ -585,7 +606,7 @@ describe("POST /api/plans/:id/adjust", () => {
     const { app, db } = makeApp();
     const res = await request(app)
       .post(`/api/plans/999/adjust`)
-      .send({ note: "x", cutoffDay: 0, cutoffSlot: "breakfast" });
+      .send({ note: "x", scope: { kind: "from", day: 0, slot: "breakfast" } });
     expect(res.status).toBe(404);
     db.close();
   });

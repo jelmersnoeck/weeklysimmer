@@ -18,6 +18,7 @@ import {
   enabledSlotsFromSchedule,
 } from "../domain/schedule.js";
 import type { EnabledSlot, Slot } from "../domain/types.js";
+import type { AdjustScope } from "../domain/adjust.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
 import { scaleRawMeal } from "../llm/curationService.js";
 import { consolidateShopping } from "../llm/consolidation.js";
@@ -32,6 +33,39 @@ class HttpError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+/**
+ * Validate the adjust request's `scope` and narrow it to a typed AdjustScope, or throw
+ * a 400. `from` needs a valid (day, slot) cut-off; `days` needs a non-empty list of
+ * day indices 0-6.
+ */
+function parseScope(scope: unknown): AdjustScope {
+  if (typeof scope !== "object" || scope === null) {
+    throw new HttpError(400, "scope must be an object");
+  }
+  const s = scope as Record<string, unknown>;
+  if (s.kind === "from") {
+    if (!Number.isInteger(s.day) || (s.day as number) < 0 || (s.day as number) > 6) {
+      throw new HttpError(400, "scope.day must be an integer 0-6");
+    }
+    if (typeof s.slot !== "string" || !SLOTS.includes(s.slot as Slot)) {
+      throw new HttpError(400, "scope.slot must be a valid slot");
+    }
+    return { kind: "from", day: s.day as number, slot: s.slot as Slot };
+  }
+  if (s.kind === "days") {
+    const days = s.days;
+    if (
+      !Array.isArray(days) ||
+      days.length === 0 ||
+      !days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+    ) {
+      throw new HttpError(400, "scope.days must be a non-empty array of day indices 0-6");
+    }
+    return { kind: "days", days: days as number[] };
+  }
+  throw new HttpError(400, "scope.kind must be 'from' or 'days'");
 }
 
 /** Routes for weekly plans, meal ratings and single-meal regeneration. */
@@ -204,13 +238,7 @@ export function plansRouter(
       throw new HttpError(409, "only the active week can be adjusted");
     }
 
-    const { note, cutoffDay, cutoffSlot } = req.body ?? {};
-    if (!Number.isInteger(cutoffDay) || cutoffDay < 0 || cutoffDay > 6) {
-      throw new HttpError(400, "cutoffDay must be an integer 0-6");
-    }
-    if (!SLOTS.includes(cutoffSlot)) {
-      throw new HttpError(400, "cutoffSlot must be a valid slot");
-    }
+    const { note, scope } = req.body ?? {};
 
     const { jobId } = enqueueAdjustment(
       { db, curator: deps.curator, store: deps.store },
@@ -218,8 +246,7 @@ export function plansRouter(
         planId: id,
         weekStart: plan.weekStart,
         note: typeof note === "string" ? note : "",
-        cutoffDay,
-        cutoffSlot: cutoffSlot as Slot,
+        scope: parseScope(scope),
       },
     );
 

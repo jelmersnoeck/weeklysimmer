@@ -112,8 +112,7 @@ describe("enqueueAdjustment", () => {
         planId,
         weekStart: before.weekStart,
         note: "less red meat, more veg",
-        cutoffDay: 3,
-        cutoffSlot: "breakfast",
+        scope: { kind: "from", day: 3, slot: "breakfast" },
       },
     );
     await done;
@@ -148,8 +147,7 @@ describe("enqueueAdjustment", () => {
         planId,
         weekStart: "2026-07-13",
         note: "more veg",
-        cutoffDay: 3,
-        cutoffSlot: "breakfast",
+        scope: { kind: "from", day: 3, slot: "breakfast" },
       },
     );
     await done;
@@ -164,12 +162,43 @@ describe("enqueueAdjustment", () => {
       job.result!.leftover.some((i) => i.name.toLowerCase().includes("beef")),
     ).toBe(true);
 
-    // One snapshot recorded, holding the pre-adjustment meals.
+    // One snapshot recorded, holding the pre-adjustment meals + the scope.
     const snaps = listSnapshots(db, planId);
     expect(snaps).toHaveLength(1);
     expect(snaps[0].note).toBe("more veg");
+    expect(snaps[0].scope).toEqual({ kind: "from", day: 3, slot: "breakfast" });
     expect(snaps[0].meals.some((m) => m.title === "Friday Pasta")).toBe(true);
 
+    db.close();
+  });
+
+  it("with a days scope, changes only the selected day and keeps the rest", async () => {
+    const db = openDb(":memory:");
+    saveSettings(db, makeSettings());
+    const planId = savePlan(db, samplePlan());
+
+    // The curator would change Thursday (day 3) + remove Friday (day 4), but the
+    // scope only allows Thursday — Friday must survive as out-of-scope.
+    const { done } = enqueueAdjustment(
+      { db, curator: adjustingCurator(), store: createJobStore() },
+      {
+        planId,
+        weekStart: "2026-07-13",
+        note: "make Thursday vegetarian",
+        scope: { kind: "days", days: [3] },
+      },
+    );
+    await done;
+
+    const after = getPlan(db, planId)!;
+    // Thursday changed…
+    expect(
+      after.meals.find((m) => m.day === 3 && m.slot === "dinner")!.title,
+    ).toBe("Thursday Tofu Stir Fry");
+    // …but Friday's removal was out of scope, so it stays.
+    expect(after.meals.find((m) => m.day === 4 && m.slot === "dinner")).toBeTruthy();
+    // Monday untouched.
+    expect(after.meals.find((m) => m.day === 0)!.title).toBe("Monday Salmon");
     db.close();
   });
 });

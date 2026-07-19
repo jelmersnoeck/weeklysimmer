@@ -8,6 +8,7 @@ import type {
   ProteinClass,
   EnabledSlot,
 } from "../domain/types.js";
+import type { AdjustScope } from "../domain/adjust.js";
 import {
   buildCurationPrompt,
   buildRegeneratePrompt,
@@ -46,8 +47,9 @@ export interface RegenerateMealInput {
 export interface AdjustWeekInput {
   settings: Settings;
   note: string;
-  frozenMeals: Meal[];
-  futureMeals: Meal[];
+  scope: AdjustScope;
+  fixedMeals: Meal[];
+  adjustableMeals: Meal[];
   onHand: string[];
 }
 

@@ -367,19 +367,26 @@ describe("plansRepo", () => {
 
     saveSnapshot(db, planId, {
       note: "more veg",
-      cutoffDay: 2,
-      cutoffSlot: "lunch",
+      scope: { kind: "from", day: 2, slot: "lunch" },
+      meals: plan.meals,
+      shopping,
+    });
+    saveSnapshot(db, planId, {
+      note: "just tuesday",
+      scope: { kind: "days", days: [1] },
       meals: plan.meals,
       shopping,
     });
 
     const snaps = listSnapshots(db, planId);
-    expect(snaps).toHaveLength(1);
-    expect(snaps[0].note).toBe("more veg");
-    expect(snaps[0].cutoffDay).toBe(2);
-    expect(snaps[0].cutoffSlot).toBe("lunch");
-    expect(snaps[0].meals).toHaveLength(plan.meals.length);
-    expect(snaps[0].shopping).toEqual(shopping);
+    expect(snaps).toHaveLength(2);
+    // newest first — the days-scoped snapshot
+    expect(snaps[0].note).toBe("just tuesday");
+    expect(snaps[0].scope).toEqual({ kind: "days", days: [1] });
+    expect(snaps[1].note).toBe("more veg");
+    expect(snaps[1].scope).toEqual({ kind: "from", day: 2, slot: "lunch" });
+    expect(snaps[1].meals).toHaveLength(plan.meals.length);
+    expect(snaps[1].shopping).toEqual(shopping);
     db.close();
   });
 });

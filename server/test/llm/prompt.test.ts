@@ -360,12 +360,13 @@ describe("buildAdjustPrompt", () => {
   const prompt = buildAdjustPrompt({
     settings,
     note: "we're eating out Thursday, more veg after that",
-    frozenMeals: [frozen],
-    futureMeals: [future],
+    scope: { kind: "from", day: 3, slot: "breakfast" },
+    fixedMeals: [frozen],
+    adjustableMeals: [future],
     onHand: ["spinach"],
   });
 
-  it("lists the frozen meal as do-not-repeat", () => {
+  it("lists the fixed meal as do-not-repeat", () => {
     expect(prompt).toContain("Monday Miso Salmon");
     expect(prompt.toLowerCase()).toMatch(/do not repeat|already eaten/);
   });
@@ -374,7 +375,7 @@ describe("buildAdjustPrompt", () => {
     expect(prompt).toContain("we're eating out Thursday, more veg after that");
   });
 
-  it("lists the current future meals it may change", () => {
+  it("lists the adjustable meals it may change", () => {
     expect(prompt).toContain("Thursday Beef Tacos");
   });
 
@@ -382,5 +383,20 @@ describe("buildAdjustPrompt", () => {
     const lower = prompt.toLowerCase();
     expect(lower).toContain("changes");
     expect(lower).toContain("removals");
+  });
+
+  it("names the specific days for a days-scoped adjustment", () => {
+    const daysPrompt = buildAdjustPrompt({
+      settings,
+      note: "make it vegetarian",
+      scope: { kind: "days", days: [1, 3] },
+      fixedMeals: [frozen],
+      adjustableMeals: [{ ...future, day: 1, title: "Tuesday Beef Tacos" }],
+      onHand: [],
+    });
+    expect(daysPrompt).toContain("Tuesday");
+    expect(daysPrompt).toContain("Thursday");
+    // The rest of the week is framed as fixed, not "already eaten".
+    expect(daysPrompt.toLowerCase()).toContain("rest of the week");
   });
 });

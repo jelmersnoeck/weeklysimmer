@@ -150,8 +150,9 @@ describe("createAnthropicCurator.adjustWeek", () => {
     const result = await curator.adjustWeek({
       settings,
       note: "more veg",
-      frozenMeals: [],
-      futureMeals: [{ ...validPlan.meals[0], id: 1 }],
+      scope: { kind: "from", day: 0, slot: "breakfast" },
+      fixedMeals: [],
+      adjustableMeals: [{ ...validPlan.meals[0], id: 1 }],
       onHand: ["spinach"],
     });
 
@@ -171,8 +172,9 @@ describe("createAnthropicCurator.adjustWeek", () => {
       curator.adjustWeek({
         settings,
         note: "x",
-        frozenMeals: [],
-        futureMeals: [],
+        scope: { kind: "from", day: 0, slot: "breakfast" },
+        fixedMeals: [],
+        adjustableMeals: [],
         onHand: [],
       }),
     ).rejects.toThrow();

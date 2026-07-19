@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import type { PlanCurator } from "../llm/anthropicClient.js";
 import type { JobStore } from "./registry.js";
-import type { Meal, Slot } from "../domain/types.js";
+import type { Meal } from "../domain/types.js";
 import {
   getPlan,
   getShoppingItems,
@@ -13,7 +13,7 @@ import {
 } from "../db/plansRepo.js";
 import { getSettings } from "../db/settingsRepo.js";
 import { householdServings } from "../domain/portions.js";
-import { partitionMeals, isFrozen } from "../domain/adjust.js";
+import { partitionMeals, isAdjustable, type AdjustScope } from "../domain/adjust.js";
 import {
   buildShoppingList,
   consolidateShoppingList,
@@ -33,8 +33,7 @@ export interface AdjustmentInput {
   planId: number;
   weekStart: string;
   note: string;
-  cutoffDay: number;
-  cutoffSlot: Slot;
+  scope: AdjustScope;
 }
 
 /**
@@ -54,10 +53,11 @@ export function enqueueAdjustment(
   const job = store.createJob(input.weekStart);
   const startedAt = Date.now();
 
-  log(
-    "adjust",
-    `job ${job.id} queued — plan ${input.planId}, cutoff ${input.cutoffDay}/${input.cutoffSlot}`,
-  );
+  const scopeLabel =
+    input.scope.kind === "days"
+      ? `days ${input.scope.days.join(",")}`
+      : `from ${input.scope.day}/${input.scope.slot}`;
+  log("adjust", `job ${job.id} queued — plan ${input.planId}, ${scopeLabel}`);
 
   const done = (async () => {
     try {
@@ -66,22 +66,22 @@ export function enqueueAdjustment(
 
       const settings = getSettings(db);
       const oldMeals = plan.meals;
-      const cutoff = { day: input.cutoffDay, slot: input.cutoffSlot };
-      const { frozen, adjustable } = partitionMeals(oldMeals, cutoff);
+      const scope = input.scope;
+      const { fixed, adjustable } = partitionMeals(oldMeals, scope);
 
       const result = await curator.adjustWeek({
         settings,
         note: input.note,
-        frozenMeals: frozen,
-        futureMeals: adjustable,
+        scope,
+        fixedMeals: fixed,
+        adjustableMeals: adjustable,
         onHand: plan.onHand,
       });
 
       // Record the pre-adjustment state before we overwrite anything.
       saveSnapshot(db, input.planId, {
         note: input.note,
-        cutoffDay: input.cutoffDay,
-        cutoffSlot: input.cutoffSlot,
+        scope,
         meals: oldMeals,
         shopping: getShoppingItems(db, input.planId),
       });
@@ -90,10 +90,10 @@ export function enqueueAdjustment(
       const byCell = new Map<string, Meal>();
       for (const m of adjustable) byCell.set(`${m.day}:${m.slot}`, m);
 
-      // Removals — only the adjustable region; never touch a frozen (eaten) cell.
+      // Removals — only the adjustable region; never touch a fixed cell.
       for (const r of result.removals) {
-        if (isFrozen(r.day, r.slot, cutoff)) {
-          log("adjust", `ignoring removal of frozen cell ${r.day}/${r.slot}`);
+        if (!isAdjustable(r.day, r.slot, scope)) {
+          log("adjust", `ignoring removal of out-of-scope cell ${r.day}/${r.slot}`);
           continue;
         }
         const key = `${r.day}:${r.slot}`;
@@ -106,8 +106,8 @@ export function enqueueAdjustment(
 
       // Changes — replace an existing adjustable cell in place, or add a new one.
       for (const c of result.changes) {
-        if (isFrozen(c.day, c.slot, cutoff)) {
-          log("adjust", `ignoring change to frozen cell ${c.day}/${c.slot}`);
+        if (!isAdjustable(c.day, c.slot, scope)) {
+          log("adjust", `ignoring change to out-of-scope cell ${c.day}/${c.slot}`);
           continue;
         }
         const scaled = scaleRawMeal(c, servings);

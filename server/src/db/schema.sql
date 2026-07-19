@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS plan_snapshots (
   note TEXT NOT NULL DEFAULT '',
   cutoff_day INTEGER NOT NULL,
   cutoff_slot TEXT NOT NULL,
+  scope_json TEXT NOT NULL DEFAULT '',
   plan_json TEXT NOT NULL,
   shopping_json TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
