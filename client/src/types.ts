@@ -178,19 +178,23 @@ export interface Job {
   result?: ShoppingDelta | null;
 }
 
-// Body for POST /api/plans/:id/adjust — steer the rest of the week from a note.
+// Which meals an adjustment may change. `from` = a time-based cut-off (everything at or
+// after the (day, slot) cell); `days` = only the listed day indices (0=Mon..6=Sun).
+export type AdjustScope =
+  | { kind: "from"; day: number; slot: Slot }
+  | { kind: "days"; days: number[] };
+
+// Body for POST /api/plans/:id/adjust — a directional note + the scope to change.
 export interface AdjustInput {
   note: string;
-  cutoffDay: number; // 0=Mon .. 6=Sun — first still-adjustable day
-  cutoffSlot: Slot; // first still-adjustable slot on the cutoff day
+  scope: AdjustScope;
 }
 
 // A saved pre-adjustment snapshot (GET /api/plans/:id/snapshots).
 export interface PlanSnapshot {
   id: number;
   note: string;
-  cutoffDay: number;
-  cutoffSlot: Slot;
+  scope: AdjustScope;
   createdAt: string;
   meals: Meal[];
   shopping: ShoppingItem[];

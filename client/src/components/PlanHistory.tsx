@@ -1,8 +1,19 @@
 import { useState } from "react";
-import type { PlanSnapshot } from "../types";
+import type { AdjustScope, PlanSnapshot } from "../types";
 import { listSnapshots } from "../api/client";
 import { DAY_LABELS_LONG, slotLabel } from "../lib/meal";
 import "./PlanHistory.css";
+
+/** "Tuesday, Thursday" or "from Wednesday lunch" — what an adjustment re-planned. */
+function scopeText(scope: AdjustScope): string {
+  if (scope.kind === "days") {
+    const names = scope.days.map((d) => DAY_LABELS_LONG[d] ?? `day ${d}`);
+    return names.length > 0 ? names.join(", ") : "selected days";
+  }
+  return `from ${DAY_LABELS_LONG[scope.day] ?? `day ${scope.day}`} ${slotLabel(
+    scope.slot,
+  ).toLowerCase()}`;
+}
 
 interface PlanHistoryProps {
   planId: number;
@@ -72,8 +83,7 @@ export function PlanHistory({ planId }: PlanHistoryProps) {
                 <header className="plan-history__item-head">
                   <span className="plan-history__when">{formatWhen(snap.createdAt)}</span>
                   <span className="plan-history__cutoff">
-                    re-planned from {DAY_LABELS_LONG[snap.cutoffDay]}{" "}
-                    {slotLabel(snap.cutoffSlot).toLowerCase()}
+                    re-planned {scopeText(snap.scope)}
                   </span>
                 </header>
                 {snap.note && <p className="plan-history__note">“{snap.note}”</p>}
