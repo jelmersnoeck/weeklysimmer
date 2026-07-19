@@ -10,15 +10,15 @@ import {
   saveShoppingItems,
   getShoppingItems,
 } from "../db/plansRepo.js";
-import { householdServings, scaleIngredient } from "../domain/portions.js";
+import { householdServings } from "../domain/portions.js";
 import { buildShoppingList, excludeOnHand } from "../domain/shopping.js";
 import {
   SLOTS,
   enabledSlotsFromSchedule,
 } from "../domain/schedule.js";
-import type { EnabledSlot, Meal, Slot } from "../domain/types.js";
-import type { RawMeal } from "../llm/planSchema.js";
+import type { EnabledSlot, Slot } from "../domain/types.js";
 import type { PlanCurator } from "../llm/anthropicClient.js";
+import { scaleRawMeal } from "../llm/curationService.js";
 import { consolidateShopping } from "../llm/consolidation.js";
 import type { JobStore } from "../jobs/registry.js";
 import { enqueueGeneration } from "../jobs/generation.js";
@@ -30,27 +30,6 @@ class HttpError extends Error {
     super(message);
     this.status = status;
   }
-}
-
-/** Scale a raw (per-serving) meal up to household quantities. */
-function scaleRawMeal(raw: RawMeal, servings: number): Meal {
-  return {
-    day: raw.day,
-    slot: raw.slot,
-    title: raw.title,
-    cuisine: raw.cuisine,
-    proteinClass: raw.proteinClass,
-    base: raw.base,
-    difficulty: raw.difficulty,
-    prepMinutes: raw.prepMinutes,
-    cookMinutes: raw.cookMinutes,
-    caloriesPerServing: raw.caloriesPerServing,
-    servings,
-    ingredients: raw.ingredients.map((i) => scaleIngredient(i, servings)),
-    steps: raw.steps,
-    sourceUrl: raw.sourceUrl,
-    leftoverOf: raw.leftoverOf ?? null,
-  };
 }
 
 /** Routes for weekly plans, meal ratings and single-meal regeneration. */

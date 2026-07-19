@@ -9,8 +9,35 @@ import type {
   WeeklyPlan,
 } from "../domain/types.js";
 import type { PlanCurator } from "./anthropicClient.js";
+import type { RawMeal } from "./planSchema.js";
 import { consolidateShopping } from "./consolidation.js";
 import { log } from "../log.js";
+
+/**
+ * Turn a raw (per-single-serving) meal from the LLM into a stored household Meal:
+ * scale each ingredient to `servings` and stamp the serving count. Shared by initial
+ * generation, single-meal regeneration and mid-week adjustment so the scaling rule
+ * lives in exactly one place.
+ */
+export function scaleRawMeal(raw: RawMeal, servings: number): Meal {
+  return {
+    day: raw.day,
+    slot: raw.slot,
+    title: raw.title,
+    cuisine: raw.cuisine,
+    proteinClass: raw.proteinClass,
+    base: raw.base,
+    difficulty: raw.difficulty,
+    prepMinutes: raw.prepMinutes,
+    cookMinutes: raw.cookMinutes,
+    caloriesPerServing: raw.caloriesPerServing,
+    servings,
+    ingredients: raw.ingredients.map((i) => scaleIngredient(i, servings)),
+    steps: raw.steps,
+    sourceUrl: raw.sourceUrl,
+    leftoverOf: raw.leftoverOf ?? null,
+  };
+}
 
 export interface GeneratePlanInput {
   weekStart: string;
@@ -62,23 +89,7 @@ export async function generatePlan(
 
   const servings = householdServings(settings.household);
 
-  const meals: Meal[] = raw.meals.map((m) => ({
-    day: m.day,
-    slot: m.slot,
-    title: m.title,
-    cuisine: m.cuisine,
-    proteinClass: m.proteinClass,
-    base: m.base,
-    difficulty: m.difficulty,
-    prepMinutes: m.prepMinutes,
-    cookMinutes: m.cookMinutes,
-    caloriesPerServing: m.caloriesPerServing,
-    servings,
-    ingredients: m.ingredients.map((i) => scaleIngredient(i, servings)),
-    steps: m.steps,
-    sourceUrl: m.sourceUrl,
-    leftoverOf: m.leftoverOf ?? null,
-  }));
+  const meals: Meal[] = raw.meals.map((m) => scaleRawMeal(m, servings));
 
   const plan: WeeklyPlan = {
     weekStart: input.weekStart,
