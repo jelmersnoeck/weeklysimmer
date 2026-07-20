@@ -179,7 +179,7 @@ export function Settings({ initial, options, mode, onSaved }: SettingsProps) {
         </p>
         <textarea
           className="settings__personal-note"
-          aria-label="Personalisation"
+          aria-label="Personalisation note"
           rows={4}
           maxLength={2000}
           placeholder="e.g. We only cook one pot on weeknights, love bold flavours, and are trying to eat less red meat this month."

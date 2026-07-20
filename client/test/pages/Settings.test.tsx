@@ -272,7 +272,7 @@ describe("Settings screen", () => {
       />,
     );
 
-    const box = screen.getByLabelText("Personalisation", { selector: "textarea" });
+    const box = screen.getByLabelText("Personalisation note");
     await user.type(box, "no pork, one-pot only");
     await user.click(screen.getByRole("button", { name: /save/i }));
 

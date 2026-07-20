@@ -432,8 +432,27 @@ describe("personalNote injection", () => {
   });
 
   it("omits the note section entirely when personalNote is empty", () => {
-    const plain = buildCurationPrompt(input); // input.settings has personalNote ""
-    expect(plain.toUpperCase()).not.toContain("HIGHEST PRIORITY");
-    expect(plain).not.toContain("Household instructions");
+    const plainCuration = buildCurationPrompt(input); // input.settings has personalNote ""
+    const plainRegenerate = buildRegeneratePrompt({
+      settings: makeSettings(),
+      day: 1,
+      slot: "dinner",
+      proteinClass: "lean",
+      onHand: [],
+      note: "",
+      otherMeals: [] as Meal[],
+    });
+    const plainAdjust = buildAdjustPrompt({
+      settings: makeSettings(),
+      note: "",
+      scope: { kind: "days", days: [2] },
+      fixedMeals: [] as Meal[],
+      adjustableMeals: [] as Meal[],
+      onHand: [],
+    });
+    for (const prompt of [plainCuration, plainRegenerate, plainAdjust]) {
+      expect(prompt.toUpperCase()).not.toContain("HIGHEST PRIORITY");
+      expect(prompt).not.toContain("Household instructions");
+    }
   });
 });
