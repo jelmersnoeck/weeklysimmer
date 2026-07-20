@@ -89,6 +89,7 @@ const sampleSettings: Settings = {
   diets: [],
   units: ["metric"],
   effort: "easy",
+  personalNote: "",
   mealSchedule: Object.fromEntries(
     SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),
   ) as Settings["mealSchedule"],

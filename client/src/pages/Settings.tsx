@@ -168,6 +168,26 @@ export function Settings({ initial, options, mode, onSaved }: SettingsProps) {
         </p>
       </div>
 
+      {/* Personalisation */}
+      <section className="settings__section" aria-labelledby="set-personal">
+        <h3 className="settings__section-title" id="set-personal">
+          Personalisation
+        </h3>
+        <p className="settings__hint">
+          Standing instructions in your own words, applied to every plan. These take
+          precedence over everything else — including your avoids and diets.
+        </p>
+        <textarea
+          className="settings__personal-note"
+          aria-label="Personalisation"
+          rows={4}
+          maxLength={2000}
+          placeholder="e.g. We only cook one pot on weeknights, love bold flavours, and are trying to eat less red meat this month."
+          value={draft.personalNote ?? ""}
+          onChange={(e) => patch({ personalNote: e.target.value })}
+        />
+      </section>
+
       {/* Household */}
       <section className="settings__section" aria-labelledby="set-household">
         <h3 className="settings__section-title" id="set-household">

@@ -43,6 +43,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     diets: [],
     units: ["metric"],
     effort: "medium",
+    personalNote: "",
     mealSchedule: Object.fromEntries(
       SLOT_ORDER.map((s) => [s, Array(7).fill(true)]),
     ) as Settings["mealSchedule"],
@@ -254,5 +255,29 @@ describe("Settings screen", () => {
       name: /remove member/i,
     });
     expect(remove).toBeDisabled();
+  });
+
+  test("edits and saves the personalisation note", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.updateSettings).mockResolvedValue({
+      settings: makeSettings({ personalNote: "no pork, one-pot only" }),
+      conflicts: [],
+    });
+    render(
+      <SettingsScreen
+        initial={makeSettings()}
+        options={options}
+        mode="edit"
+        onSaved={() => {}}
+      />,
+    );
+
+    const box = screen.getByLabelText("Personalisation", { selector: "textarea" });
+    await user.type(box, "no pork, one-pot only");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
+    const sent = vi.mocked(api.updateSettings).mock.calls[0][0];
+    expect(sent.personalNote).toBe("no pork, one-pot only");
   });
 });
