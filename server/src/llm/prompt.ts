@@ -109,6 +109,26 @@ function proteinProfile(settings: Settings): string {
 }
 
 /**
+ * Render the household's standing free-text instructions as a top-priority prompt
+ * block, or "" when unset so the section is omitted entirely (keeping note-less
+ * prompts byte-identical). Framed as HIGHEST priority: it overrides every structured
+ * preference, diet, and exclude that follows.
+ */
+function personalNoteSection(settings: Settings): string {
+  const note = settings.personalNote?.trim();
+  if (!note) return "";
+  return `## Household instructions (HIGHEST PRIORITY — these override everything below)
+The household gave these standing instructions in their own words. They take precedence
+over every preference, diet, and exclude listed later in this prompt — where anything
+conflicts, THESE WIN:
+"""
+${note}
+"""
+
+`;
+}
+
+/**
  * Build the (pure, no-network) curation prompt handed to the LLM.
  *
  * All tunable wording lives here on purpose so the meal-planning behaviour can be
@@ -123,6 +143,7 @@ export function buildCurationPrompt(input: CurationPromptInput): string {
   const avoidRepeat =
     avoid.length > 0 ? avoid.map((m) => `- ${m}`).join("\n") : "- (nothing yet)";
   const servings = householdServings(settings.household);
+  const noteSection = personalNoteSection(settings);
   const dietSection =
     settings.diets.length > 0
       ? `\n## Diet
@@ -135,7 +156,7 @@ protein and taste choices first whenever they conflict with a diet label.\n`
 Week starting (Monday): ${weekStart}
 User note for this week: ${note}
 
-You are ONLY responsible for choosing REAL recipes and returning them as structured
+${noteSection}You are ONLY responsible for choosing REAL recipes and returning them as structured
 data. The application scales portions and builds the shopping list itself, so you do
 not need to do any arithmetic on quantities.
 
@@ -238,11 +259,12 @@ export function buildRegeneratePrompt(input: RegeneratePromptInput): string {
       ? otherMeals.map((m) => `- ${m.title}`).join("\n")
       : "- (none)";
   const dietLine = settings.diets.length > 0 ? `\n${dietGuidance(settings)}` : "";
+  const noteSection = personalNoteSection(settings);
 
   return `You are a meal-prep planner for a family household. Replace ONE meal in an
 existing weekly plan and return it as a single structured meal.
 
-## Target slot
+${noteSection}## Target slot
 Regenerate the meal for ${dayName} (day ${day}), slot: ${slot}.
 User note for this week: ${note}
 
@@ -334,6 +356,7 @@ export function buildAdjustPrompt(input: AdjustPromptInput): string {
     onHand.length > 0 ? onHand.join(", ") : "(nothing this week)";
   const dietLine =
     settings.diets.length > 0 ? `\n${dietGuidance(settings)}` : "";
+  const noteSection = personalNoteSection(settings);
 
   const scopeIntro =
     scope.kind === "days"
@@ -347,7 +370,7 @@ export function buildAdjustPrompt(input: AdjustPromptInput): string {
 
   return `You are a meal-prep planner for a family household. ${scopeIntro}
 
-## What the household is asking for (apply this to the meals you may change)
+${noteSection}## What the household is asking for (apply this to the meals you may change)
 ${note.trim().length > 0 ? note : "(no specific note — just refresh the changeable meals for variety)"}
 
 ${fixedHeading}

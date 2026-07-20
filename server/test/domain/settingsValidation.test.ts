@@ -48,4 +48,32 @@ describe("validateSettings", () => {
     const result = validateSettings(makeSettings({ units: ["imperial"] as never }));
     expect(result.ok).toBe(false);
   });
+
+  it("defaults a missing personalNote to an empty string", () => {
+    const { personalNote, ...withoutNote } = makeSettings();
+    const result = validateSettings(withoutNote);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.settings.personalNote).toBe("");
+  });
+
+  it("trims and keeps a provided personalNote", () => {
+    const result = validateSettings(
+      makeSettings({ personalNote: "  no pork, love one-pot meals  " }),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.settings.personalNote).toBe("no pork, love one-pot meals");
+    }
+  });
+
+  it("caps personalNote at 2000 characters", () => {
+    const result = validateSettings(makeSettings({ personalNote: "a".repeat(2500) }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.settings.personalNote).toHaveLength(2000);
+  });
+
+  it("rejects a non-string personalNote", () => {
+    const result = validateSettings(makeSettings({ personalNote: 42 as never }));
+    expect(result.ok).toBe(false);
+  });
 });

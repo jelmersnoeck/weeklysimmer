@@ -99,6 +99,8 @@ export interface Settings {
   diets: Diet[];
   units: MeasurementSystem[];
   effort: "easy" | "medium" | "hard";
+  /** Free-text standing instructions applied to every plan; "" when unset. */
+  personalNote: string;
   // Which meals to plan per slot; NOT edited on the settings screen — carried through as-is.
   mealSchedule: MealSchedule;
 }

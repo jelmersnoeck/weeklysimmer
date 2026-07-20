@@ -84,6 +84,8 @@ export interface Settings {
   diets: Diet[];
   units: MeasurementSystem[]; // at least one; "metric" is always the canonical measure
   effort: Difficulty;
+  /** Free-text standing instructions applied to every plan; "" when unset. Highest priority. */
+  personalNote: string;
   mealSchedule: MealSchedule;
 }
 

@@ -400,3 +400,59 @@ describe("buildAdjustPrompt", () => {
     expect(daysPrompt.toLowerCase()).toContain("rest of the week");
   });
 });
+
+describe("personalNote injection", () => {
+  const NOTE = "We only cook one pot on weeknights and avoid all pork.";
+  const noted = makeSettings({ personalNote: NOTE });
+
+  const curation = buildCurationPrompt({ ...input, settings: noted });
+  const regenerate = buildRegeneratePrompt({
+    settings: noted,
+    day: 1,
+    slot: "dinner",
+    proteinClass: "lean",
+    onHand: [],
+    note: "",
+    otherMeals: [] as Meal[],
+  });
+  const adjust = buildAdjustPrompt({
+    settings: noted,
+    note: "",
+    scope: { kind: "days", days: [2] },
+    fixedMeals: [] as Meal[],
+    adjustableMeals: [] as Meal[],
+    onHand: [],
+  });
+
+  it("puts the note as a HIGHEST PRIORITY block in all three planning prompts", () => {
+    for (const prompt of [curation, regenerate, adjust]) {
+      expect(prompt).toContain(NOTE);
+      expect(prompt.toUpperCase()).toContain("HIGHEST PRIORITY");
+    }
+  });
+
+  it("omits the note section entirely when personalNote is empty", () => {
+    const plainCuration = buildCurationPrompt(input); // input.settings has personalNote ""
+    const plainRegenerate = buildRegeneratePrompt({
+      settings: makeSettings(),
+      day: 1,
+      slot: "dinner",
+      proteinClass: "lean",
+      onHand: [],
+      note: "",
+      otherMeals: [] as Meal[],
+    });
+    const plainAdjust = buildAdjustPrompt({
+      settings: makeSettings(),
+      note: "",
+      scope: { kind: "days", days: [2] },
+      fixedMeals: [] as Meal[],
+      adjustableMeals: [] as Meal[],
+      onHand: [],
+    });
+    for (const prompt of [plainCuration, plainRegenerate, plainAdjust]) {
+      expect(prompt.toUpperCase()).not.toContain("HIGHEST PRIORITY");
+      expect(prompt).not.toContain("Household instructions");
+    }
+  });
+});

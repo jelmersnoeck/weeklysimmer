@@ -28,6 +28,7 @@ function makeSettings(configured: boolean): Settings {
     diets: [],
     units: ["metric"],
     effort: "medium",
+    personalNote: "",
     mealSchedule: allOnSchedule(),
   };
 }

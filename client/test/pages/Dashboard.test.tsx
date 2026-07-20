@@ -33,6 +33,7 @@ const settings: Settings = {
   diets: [],
   units: ["metric"],
   effort: "medium",
+  personalNote: "",
   mealSchedule: allOnSchedule(),
 };
 

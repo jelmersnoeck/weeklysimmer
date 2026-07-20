@@ -146,6 +146,16 @@ export function validateSettings(body: unknown): ValidationResult {
     return { ok: false, error: "effort must be easy, medium or hard" };
   }
 
+  // personalNote: optional free-text standing instructions. Trim, then cap length
+  // to bound token cost. Missing → "". Non-string is a hard 400.
+  let personalNote = "";
+  if (b.personalNote !== undefined) {
+    if (typeof b.personalNote !== "string") {
+      return { ok: false, error: "personalNote must be a string" };
+    }
+    personalNote = b.personalNote.trim().slice(0, 2000);
+  }
+
   const mealSchedule = validateMealSchedule(b.mealSchedule);
   if (!mealSchedule) {
     return {
@@ -169,6 +179,7 @@ export function validateSettings(body: unknown): ValidationResult {
       diets: b.diets as Diet[],
       units: b.units as MeasurementSystem[],
       effort: b.effort as Difficulty,
+      personalNote,
       mealSchedule,
     },
   };
