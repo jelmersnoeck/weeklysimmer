@@ -75,6 +75,25 @@ describe("getSettings", () => {
     db.close();
   });
 
+  it("backfills personalNote to '' for a v2 row saved before the field existed", () => {
+    const db = openDb(":memory:");
+    const { personalNote, ...withoutNote } = makeSettings();
+    db.prepare("INSERT OR REPLACE INTO settings (id, data) VALUES (1, ?)").run(
+      JSON.stringify(withoutNote),
+    );
+    const settings = getSettings(db);
+    expect(settings.configured).toBe(true);
+    expect(settings.personalNote).toBe("");
+    db.close();
+  });
+
+  it("round-trips a saved personalNote", () => {
+    const db = openDb(":memory:");
+    saveSettings(db, makeSettings({ personalNote: "budget-friendly, batch cook" }));
+    expect(getSettings(db).personalNote).toBe("budget-friendly, batch cook");
+    db.close();
+  });
+
   it("drops a removed diet value when migrating an old `diet` row", () => {
     const db = openDb(":memory:");
     const { diets, ...rest } = makeSettings();

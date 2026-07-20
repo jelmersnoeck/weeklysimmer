@@ -209,6 +209,7 @@ export function defaultSettings(): Settings {
     diets: ["low_fodmap"],
     units: ["metric"],
     effort: "easy",
+    personalNote: "",
     mealSchedule: defaultMealSchedule(),
   };
 }
